@@ -255,6 +255,7 @@ in
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in 
+			NewGrid = {BuildWindow}
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			NewState = {DrawSubmarine Grid ID Position}
