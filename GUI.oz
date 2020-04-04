@@ -1,6 +1,7 @@
 functor
 import
 	QTk at 'x-oz://system/wp/QTk.ozf'
+	System(show:Show)
 	Input
 export
 	portWindow:StartWindow
@@ -152,8 +153,8 @@ in
 			case List
 			of nil then nil
 			[] H|T then
-				if (H.1 == Position) then
-					{RemoveItem Grid H.2}
+				if (H.2 == Position) then
+					{RemoveItem Grid H.1}
 					T
 				else
 					H|{RmMine Grid Position T}
@@ -163,6 +164,7 @@ in
 	in
 		fun{RemoveMine Position}
 			fun{$ Grid State}
+				{Show 'rEMOOOOOOOOOOOVVVVVVVVE_MINNNNNNEEEEEEEEEE'}
 				ID HandleScore Handle Mine Path NewMine
 				in
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
@@ -254,8 +256,9 @@ in
 	proc{TreatStream Stream Grid State}
 		case Stream
 		of nil then skip
-		[] buildWindow|T then NewGrid in 
+		[] buildWindow(X)|T then NewGrid in 
 			NewGrid = {BuildWindow}
+			X=unit
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			NewState = {DrawSubmarine Grid ID Position}

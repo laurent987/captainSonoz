@@ -9,30 +9,35 @@ import
 define
 	PlayerList
 	GUI_port
+	X
 	proc {NewGameTurnBased PlayerList}
 		proc {LoopGame PlayerList} 
 			if {Length PlayerList} > 1 then
 				{LoopGame {RoundTable PlayerList PlayerList}}
-			else {Show 'the end'} end
+			else
+				{Show 'the end'#PlayerList}
+			end
 		end
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
 		% PL is the List of All the players alive
 		fun {RoundTable PlayersLeft PL}
-			{Delay 200}
+			{Delay 2000}
 			case PlayersLeft of nil then nil
-			[] player(destroyed: Destroyed ...)|Pr andthen Destroyed then {RoundTable Pr PL}
+			[] P|Pr andthen {Send P.port isDead($)} then {RoundTable Pr PL}
 			[] P|Pr andthen X in (X=P.turnToWait)>0 then
 				{Record.adjoin P player(turnToWait: X-1)}|{RoundTable Pr PL}
 			[] P|Pr then {PlayTurn P PL}|{RoundTable Pr PL}
 			end
 		end
 		fun {PlayTurn Player PlayerList} Dir in
+			if Player.surface then {Send Player.port dive} end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
-				{Record.adjoin Player player(turnToWait: Input.turnSurface)}
+				{Record.adjoin Player player(turnToWait: Input.turnSurface surface:true)}
 			else
 				{ChargeItem Player PlayerList}
 				{FireItem Player PlayerList}
+				{FireMine Player PlayerList}
 				Player
 			end
 		end
@@ -48,8 +53,8 @@ define
                     if (Input.isTurnByTurn) then 
                         player( port:{PlayerManager.playerGenerator H1 H2 IdNum}
 								id: IdNum
-                                turnToWait:0
-                                destroyed:false)|{Loop T1 T2 IdNum+1}
+								surface:true
+                                turnToWait:0)|{Loop T1 T2 IdNum+1}
                     else
                         player(port:{PlayerManager.playerGenerator H1 H2 IdNum})|{Loop T1 T2 IdNum+1} 
                     end
@@ -133,13 +138,21 @@ define
 			end
 		end
 	end
+	proc {FireMine Player PlayerList} ID Position in
+		{Send Player.port fireMine(?ID ?Position)}
+		if Position \= null then 
+			{Send GUI_port removeMine(ID Position)}
+			{Broadcast explosion(sayMineExplode ID Position) PlayerList}
+		end
+	end
 in
     GUI_port = {GUI.portWindow}
-    {Send GUI_port buildWindow}
+    {Send GUI_port buildWindow(X)}
 
     PlayerList = {GeneratePlayers} 
     {List.forAll PlayerList InitPlayer}
-
+	{Wait X}
+	{Show start}
     if (Input.isTurnByTurn) then 
         {NewGameTurnBased PlayerList}
     else
