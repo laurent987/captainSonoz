@@ -9,10 +9,14 @@ GUI.ozf: Input.ozf
 Input.ozf:
 	ozc -c Input.oz
 
-PlayerManager.ozf:
+PlayerManager.ozf: Player.ozf
 	ozc -c PlayerManager.oz
+
+Player.ozf:
+	ozc -c Player.oz
 
 clean:
 	rm Main.ozf
 	rm Input.ozf
 	rm GUI.ozf
+	rm Player.ozf
