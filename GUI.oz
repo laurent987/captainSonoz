@@ -175,7 +175,7 @@ in
 	fun{DrawPath Grid Color X Y}
 		Handle LabelPath
 	in
-		LabelPath = label(text:"" handle:Handle bg:Color)
+		LabelPath = label(text:"ttt" handle:Handle bg:Color)
 		{Grid.grid configure(LabelPath row:X+1 column:Y+1)}
 		Handle
 	end
@@ -255,6 +255,7 @@ in
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in 
+			NewGrid = {BuildWindow}
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			NewState = {DrawSubmarine Grid ID Position}
