@@ -1,6 +1,8 @@
 functor
 import
     Input
+	OS
+	System(show:Show)
 export
     portPlayer:StartPlayer
 define
@@ -9,24 +11,31 @@ define
 	Map = Input.map
 	NRow = Input.nRow
 	NColumn = Input.nColumn
-	InitPosition
 	StateMod
+	InitPosition
 	GetInitialPosition
+	GetAcceptablePositions
 in
 
 	fun{InitPosition ?ID ?Position}
 		fun{$ Player}
-			ID=Player.ID
-			player(position: {GetInitialPosition})
+			{Show player#Player}
+			ID=Player.id
+			{Show ID}
+			Position = {GetInitialPosition}
+			{Show Position}
+			player(position: Position)
 		end
 	end
 
 	fun {GetInitialPosition}
 			L Ran Position X Y
 	in
+		{Show getinit}
 		L = {GetAcceptablePositions Map 0}
+		{Show L}
 		Ran = 1 + {OS.rand} mod {List.length L}
-		Position = {List.Nth L Ran}
+		Position = {List.nth L Ran}
 		X = Position div NColumn + 1
 		Y = Position mod NColumn + 1
 		pt(x:X y:Y)		
@@ -54,10 +63,12 @@ in
 			case Rows of nil then R=nil
 			[] T|End then X in
 				R = {SearchRow T N X}
-				{Loop End N+NColumn X}
+				{Show R}
+				{Loop End N+NColumn NColumn X}
 			end
 		end
 	in
+		{Show accept}
 		{Loop Matrice 0 {List.length Matrice.1} $}
 	end
 
@@ -71,7 +82,7 @@ in
     fun{StartPlayer Color Id}
         Stream
         Port
-		StateInitial=player(id(id:Id color:Color name:'Player')
+		StateInitial=player(id:id(id:Id color:Color name:'Player')
 							domage:0 			% numbre of domage received
 							surface:true		% true if the sub is on the surface
 							mines:nil			% mines=[mine_1(<position),..., mine_n(<position)]
@@ -87,6 +98,7 @@ in
 	proc{TreatStream Stream State}
 		case Stream of nil then skip
 		[] initPosition(?ID ?Position)|T then
+			thread {Wait Position} {Show pos#Position} end
 			{TreatStream T {StateMod State {InitPosition ID Position}}}
 		[] move(?ID ?Position ?Direction)|T then
 			{TreatStream T State}

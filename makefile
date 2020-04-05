@@ -20,3 +20,6 @@ clean:
 	rm Input.ozf
 	rm GUI.ozf
 	rm Player.ozf
+
+clean_player:
+	rm Player.ozf
