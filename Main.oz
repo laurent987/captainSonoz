@@ -21,7 +21,7 @@ define
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
 		% PL is the List of All the players alive
 		fun {RoundTable PlayersLeft PL}
-			{Delay 2000}
+			{Delay 500}
 			case PlayersLeft of nil then nil
 			[] P|Pr andthen {Send P.port isDead($)} then {RoundTable Pr PL}
 			[] P|Pr andthen X in (X=P.turnToWait)>0 then
@@ -128,9 +128,10 @@ define
 	proc {FireItem Player PLayerList} ID KindItem in
 		{Send Player.port fireItem(?ID ?KindItem)}
 		if KindItem \= null then
+			{Show kindItem#KindItem}
 			case KindItem
 			of mine(Position) then 
-				{Broadcast sayMinePlaced(ID Position) PLayerList}
+				{Broadcast sayMinePlaced(ID) PLayerList}
 				{Send GUI_port putMine(ID Position)}
 			[] missile(Position) then {Broadcast explosion(sayMissileExplode ID Position) PlayerList}
 			[] drone(...) then {Broadcast query(Player sayPassingDrone(KindItem) sayAnswerDrone) PlayerList}
