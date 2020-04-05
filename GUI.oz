@@ -164,7 +164,6 @@ in
 	in
 		fun{RemoveMine Position}
 			fun{$ Grid State}
-				{Show 'rEMOOOOOOOOOOOVVVVVVVVE_MINNNNNNEEEEEEEEEE'}
 				ID HandleScore Handle Mine Path NewMine
 				in
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
