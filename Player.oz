@@ -6,34 +6,43 @@ import
 export
     portPlayer:StartPlayer
 define
-    StartPlayer
-    TreatStream
-	GetRandIndex
-	GetRandElem
-	MapToList
+	%%% Data %%%
 	Map = Input.map
-	ListMap
 	NRow = Input.nRow
 	NColumn = Input.nColumn
-	StateMod
+	ListMap
+	%%% Player %%%
+    StartPlayer % Port
+    TreatStream % Manage Stream
+	StateMod	% Merge State 
+	%%% Strategy functions %%%
 	InitPosition
-	GetInitValidPosition
-	GetValidPosition
-	GetValidPosition2
 	Move
-	GetValidPositions
-	GetValidPositions2
-	GetInitValidPositions
+		GetDirection
+	ChargeItem
+	FireItem
+		GetItemsLoaded
+		IsLoaded
+	FireMine
+	%%% Position Management %%%
+	MapToList
+	GenerateMapPosition
 	GenerateManathanPosition
+	GetValidPositionsOnMap
+	GetValidPositionOnMap
+	GetValidPosition
+	GetValidPositions
+	GetValidPosition2
+	GetValidPositions2
+	%%% Filters  %%%
+	ApplyFilters
 	FilterGeneric
 	IsInsideMap
 	IsNotIsland
 	IsNotAlreadyGoThere
-	GetDirection
-	ChargeItem
-	FireItem
-	GetItemsLoaded
-	IsLoaded
+	%%% Util %%%
+	GetRandIndex
+	GetRandElem
 	
 in
 	fun{StateMod State Fun}
@@ -55,50 +64,9 @@ in
 	fun{InitPosition ?ID ?Position}
 		fun{$ Player}
 			ID=Player.id
-			Position = {GetInitValidPosition}
+			Position = {GetValidPositionOnMap}
 			player(position:Position path:Position|Player.path)
 		end
-	end
-
-	fun {GetInitValidPosition}
-			L Position X Y
-	in
-		L = {GetInitValidPositions Map 0}
-		Position = {GetRandElem L}
-		X = Position div NColumn + 1
-		Y = Position mod NColumn + 1
-		pt(x:X y:Y)		
-	end
-
-	%% @Pre : 
-	%%	--> Matrice: a List of List : 
-	%% 		[[a_11 ... a_1n] ... [a_m1 ... a_mn]]
-	%% 		where 'n' is the number of column and 'm' the number of row.
-	%% -->	Value: a number 
-	%% @Post: 
-	%%	--> Return a List 'L' with the positions of elements a_ij which are egal to Value.
-	%%	 	Where position of a_ij is P(a_ij) = (i - 1) * n + (j-1)
-	%% 	 	L = [ ... P(a_lk) ... P(a_uv) ...] with 0 < l,u =< m and 0 < k,v =< n
-	%%		and a_lk = a_uv = Value and l =< u and (l=u => k<v)
-	%%		
-	%% Exemple: 
-	%% Matrice = [[0 1 0][0 1 0]], Value = 0
-	%% Return L = [0 2 3 5]
-	fun{GetInitValidPositions Matrice Value}
-		fun{SearchRow Row N X}
-			case Row of nil then X
-			[] H|T andthen H==0 then N|{SearchRow T N+1 X}
-			else {SearchRow Row.2 N+1 X} end
-		end
-		proc{Loop Rows N NColumn R}
-			case Rows of nil then R=nil
-			[] T|End then X in
-				R = {SearchRow T N X}
-				{Loop End N+NColumn NColumn X}
-			end
-		end
-	in
-		{Loop Matrice 0 {List.length Matrice.1} $}
 	end
 
 	fun{Move ID Position Direction}
@@ -140,20 +108,25 @@ in
 	end
 
 	fun{FireItem ?ID ?KindFire}
-		fun{$ Player} ItemsLoaded Item in
+		fun{$ Player} ItemsLoaded Item MinePos Mines in
 			ID = Player.id
 			ItemsLoaded = {GetItemsLoaded Player}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
 				{Show item#Item#loaded#preparationToFire}
 				case Item
-				of mine then KindFire = mine({GetValidPosition2 Player.position Input.minDistanceMine Input.maxDistanceMine nil})
+				of mine then
+					MinePos = {GetValidPosition2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
+					KindFire = mine(MinePos)
 				[] missile then KindFire = missile({GetValidPosition2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
 				[] drone then KindFire = drone(row 3)
 				[] sonar then KindFire = sonar
 				end
 				{Show Player.id.color#fireItem#Item}
-				player(load:items(Item:Player.load.Item - Input.Item))
+				if {IsDet MinePos} then Mines = MinePos|Player.mines
+				else Mines = Player.mines end
+
+				player(load:items(Item:Player.load.Item - Input.Item) mines:Mines)
 			else 
 				KindFire = null
 				player()
@@ -175,10 +148,35 @@ in
 		Player.load.Item >= Input.Item
 	end
 
+	fun{FireMine ?ID ?Mine}
+		fun{$ Player}
+			ID = Player.id
+			case Player.mines 
+			of H|Mines then Ran = {OS.rand} mod 4 in
+				if Ran == 0 then
+					Mine=H
+					{Show Player.id.color#fireMine#H}
+					player(mines:Mines)
+				end
+			else Mine=null player()
+			end
+		end
+	end
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% FILTERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
+	fun{ApplyFilters Filters Ys}
+		thread
+			case Filters of nil then Ys
+			[] Filter|Fs then Zs in
+				Zs = {FilterGeneric Ys Filter}
+				{ApplyFilters Fs Zs}
+			end 
+		end
+	end
+
 	fun{FilterGeneric Ys F}
 		case Ys of nil then nil
 		[] H|T andthen {F H} then H|{Filter T F}
@@ -209,17 +207,7 @@ in
 		end			
 	end
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% UTIL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{GetRandIndex L}
-		{OS.rand} mod {List.length L} + 1
-	end
-
-	fun{GetRandElem L}
-		if {List.length L} == 0 then null
-		else {List.nth L {GetRandIndex L}} end
-	end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Position Management %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	fun{MapToList Map}
 		fun{GetRow Row X}
@@ -238,6 +226,25 @@ in
 		{Loop Map $}
 	end
 
+	fun{GenerateMapPosition Row Col}
+		fun{Loop I J}
+			if I == Row+1 then nil
+			elseif J == Col+1 then {Loop I+1 1}
+			else pt(x:I y:J)|{Loop I J+1} end  
+		end
+	in
+		{Loop 1 1}
+	end
+
+	fun{GetValidPositionsOnMap} S in
+		S = thread {GenerateMapPosition NRow NColumn} end
+		{ApplyFilters [IsNotIsland] S}
+	end
+
+	fun{GetValidPositionOnMap}
+		{GetRandElem {GetValidPositionsOnMap}}
+	end
+
 	fun{GenerateManathanPosition Position Min Max}
 		pt(x:X y:Y) = Position
 		fun{Loop Min Max I J} NextPos=pt(x:X+I y:Y+J) in
@@ -251,19 +258,13 @@ in
 		{Loop Min Max ~Max ~Max}
 	end
 
-	fun{GetValidPositions Position Min Max Filters}
+	fun{GetValidPositions Position Min Max Filters} S in
 		S = thread {GenerateManathanPosition Position Min Max} end
-		fun{Loop Filters Ys}
-			thread
-			case Filters of nil then Ys
-			[] Filter|Fs then Zs in
-				Zs = {FilterGeneric Ys Filter}
-				{Loop Fs Zs}
-			end 
-			end
-		end
-	in
-		{Loop Filters S}
+		{ApplyFilters Filters S}
+	end
+
+	fun{GetValidPosition Position Min Max Filters}
+		{GetRandElem {GetValidPositions Position Min Max Filters}}
 	end
 
 	fun{GetValidPositions2 Position Min Max Filters}
@@ -276,6 +277,16 @@ in
 		{GetRandElem {GetValidPositions2 Position Min Max Filters}}
 	end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% UTIL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	fun{GetRandIndex L}
+		{OS.rand} mod {List.length L} + 1
+	end
+
+	fun{GetRandElem L}
+		if {List.length L} == 0 then null
+		else {List.nth L {GetRandIndex L}} end
+	end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}

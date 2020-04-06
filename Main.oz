@@ -128,7 +128,6 @@ define
 	proc {FireItem Player PLayerList} ID KindItem in
 		{Send Player.port fireItem(?ID ?KindItem)}
 		if KindItem \= null then
-			{Show kindItem#KindItem}
 			case KindItem
 			of mine(Position) then 
 				{Broadcast sayMinePlaced(ID) PLayerList}
