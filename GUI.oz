@@ -222,9 +222,9 @@ in
 	fun{RemovePlayer Grid WantedID State}
 		case State
 		of nil then nil
-		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then
-			{HandleScore set(0)}
+		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then	
 			if (ID == WantedID) then
+				{HandleScore set(0)}
 				for H in P do
 			 		{RemoveItem Grid H}
 				end
