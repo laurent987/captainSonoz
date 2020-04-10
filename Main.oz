@@ -4,12 +4,15 @@ import
     Input
     PlayerManager
 	System(show:Show)
-	% List(length:Length forAll:ForAll)
-	% Record(adjoin:Adjoin)
+	OS
 define
 	PlayerList
 	GUI_port
 	X
+	proc {SimultateThinking}
+		{Show thinking}
+		{Delay Input.thinkMin + {OS.rand} mod (Input.thinkMax - Input.thinkMin)}
+	end
 	proc {NewGameTurnBased PlayerList}
 		proc {LoopGame PlayerList} 
 			if {Length PlayerList} > 1 then
@@ -44,7 +47,33 @@ define
 	in
 		{LoopGame PlayerList}
 	end
-	proc {NewGameRealTime PlayerList} skip end
+	proc {NewGameRealTime PlayerList}
+		for Player in PlayerList do
+			proc{Loop Player} Dead in
+				{Send Player.port isDead(?Dead)}
+				if Dead then skip
+				else Dir in 
+					if Player.surface then {Send Player.port dive} end
+					{SimultateThinking}
+					Dir = {Move Player PlayerList}
+					if Dir==surface then 
+						{Delay Input.turnSurface*1000}
+						{Loop {Record.adjoin Player player(surface:true)}}
+					else
+						{SimultateThinking}
+						{ChargeItem Player PlayerList}
+						{SimultateThinking}
+						{FireItem Player PlayerList}
+						{SimultateThinking}
+						{FireMine Player PlayerList}
+						{Loop Player}				
+					end
+				end					
+			end
+		in
+			thread {Loop Player} end
+		end
+	end
     fun {GeneratePlayers}
         fun {Loop PlayerList ColorList IdNum}
             if IdNum > Input.nbPlayer then nil
@@ -56,7 +85,8 @@ define
 								surface:true
                                 turnToWait:0)|{Loop T1 T2 IdNum+1}
                     else
-                        player(port:{PlayerManager.playerGenerator H1 H2 IdNum})|{Loop T1 T2 IdNum+1} 
+                        player(	port:{PlayerManager.playerGenerator H1 H2 IdNum}
+								surface:true)|{Loop T1 T2 IdNum+1} 
                     end
                 end
             end
@@ -93,19 +123,16 @@ define
 		[] query(Player QueryMsg AnswerMsg) then
 			{List.forAll PlayerList
 				proc {$ P}
-					thread ID Answer in
-					if {Record.width QueryMsg} == 1 then 
-						{Send P.port {Record.adjoin n(2:?ID 3:?Answer) QueryMsg}}
-						{Wait Answer} {Send Player.port AnswerMsg(QueryMsg.1 ID Answer)}
-					else
-						{Send P.port QueryMsg(?ID ?Answer)}
-						{Wait Answer} {Send Player.port AnswerMsg(ID Answer)}
-					end			
+					thread ID Answer Args ArgsTupled in
+						Args = {List.append {Record.toList QueryMsg} [ID Answer]}
+						ArgsTupled = {List.mapInd Args fun {$ I A} I#A end}
+						{Send P.port {List.toRecord {Record.label QueryMsg} ArgsTupled}}
+						{Wait Answer}
+						{Send Player.port {List.toRecord {Record.label AnswerMsg} ArgsTupled}}
 					end
 				end
 			}		
-		else 
-			{List.forAll PlayerList proc {$ P} {Send P.port Message} end}
+		else {List.forAll PlayerList proc {$ P} {Send P.port Message} end}
 		end
 	end
 	fun {Move Player PlayerList} Position Id Direction in
@@ -151,8 +178,7 @@ in
 
     PlayerList = {GeneratePlayers} 
     {List.forAll PlayerList InitPlayer}
-	{Wait X}
-	{Show start}
+	{Wait X} % Wait Interface is build
     if (Input.isTurnByTurn) then 
         {NewGameTurnBased PlayerList}
     else

@@ -67,24 +67,32 @@ in
 	proc{TreatStream Stream State}
 		case Stream of nil then skip
 		[] Msg|T then 
-			Args = {Record.toList Msg}
 			NewSubsetState
+			Args = {List.append {Record.toList Msg} [State NewSubsetState]}
+			Fun = {Record.label Msg}
 		in
-			{Procedure.apply Strategy.{Record.label Msg} {List.append Args [NewSubsetState]}}
-			{TreatStream T {MergeState	State NewSubsetState}}
+			if {Value.hasFeature Strategy Fun} then  
+				{Procedure.apply Strategy.Fun Args}
+				{TreatStream T {MergeState State NewSubsetState}}
+			else % Msg don't match with a strategy function.
+				{TreatStream T State}
+			end
 		end
 	end
 
-	fun{MergeState State Fun}
-		Rec = {Fun State}
-		Label = {Record.label Rec}
-		Arities = {Record.arity Rec}
+	fun{MergeState State NewSubsetState}
+		Label = {Record.label NewSubsetState}
+		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen ({Not {Record.is Rec.H}} orelse {List.is Rec.H}) then 
-				{Loop {Record.adjoin State Label(H:Rec.H)} T}
+			[] H|T andthen ({Not {Record.is NewSubsetState.H}} orelse {List.is NewSubsetState.H}) then 
+				{Loop {Record.adjoin
+						State
+						Label(H:NewSubsetState.H)} T}
 			[] H|T then
-				{Loop {Record.adjoin State Label(H:{MergeState State.H fun{$ _} Rec.H end})} T}
+				{Loop {Record.adjoin
+						State
+						Label(H:{MergeState State.H NewSubsetState.H})} T}
 			end
 		end
 	in
@@ -96,188 +104,150 @@ in
 	Strategy = strategy(
 
 	initPosition:
-	fun{$ ?ID ?Position}
-		fun{$ Player}
-			ID=Player.id
-			Position = {GetPositionOnMap [IsNotIsland]}
-			player(position:Position path:Position|Player.path)
-		end
+	fun{$ ?ID ?Position Player}
+		ID=Player.id
+		Position = {GetPositionOnMap [IsNotIsland]}
+		player(position:Position path:Position|Player.path)
 	end
 
 	dive:
-	fun{$}
-		fun{$ Player}
-			player(surface:false)
-		end
+	fun{$ Player}
+		player(surface:false)
 	end
 
 	move:
-	fun{$ ID Position Direction}
-		fun{$ Player} ValidPositions in
-			ID = Player.id
-			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
-			if Position == null then
-				Direction=surface
-				player(path: Player.position|nil)
-			else 
-				Direction = {GetDirection Player.position Position}
-				player(position: Position path: Position|Player.path)
-			end
+	fun{$ ID Position Direction Player} ValidPositions in
+		ID = Player.id
+		Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
+		if Position == null then
+			Direction=surface
+			player(path: Player.position|nil)
+		else 
+			Direction = {GetDirection Player.position Position}
+			player(position: Position path: Position|Player.path)
 		end
 	end
 	
 	chargeItem:
-	fun{$ ?ID ?KindItem}
-		fun{$ Player} Items Item NewLoad in
-			ID = Player.id
-			Items = {Record.arity Player.load}
-			Item = {GetRandElem Items}
-			NewLoad = Player.load.Item + 1
-			if NewLoad mod Input.Item == 0 then KindItem = Item
-			else KindItem = null end
-			{Show Player.id.color#chargeItem#Item#NewLoad}
-			player(load: items(Item:NewLoad))
-		end
+	fun{$ ?ID ?KindItem Player} Items Item NewLoad in
+		ID = Player.id
+		Items = {Record.arity Player.load}
+		Item = {GetRandElem Items}
+		NewLoad = Player.load.Item + 1
+		if NewLoad mod Input.Item == 0 then KindItem = Item
+		else KindItem = null end
+		{Show Player.id.color#chargeItem#Item#NewLoad}
+		player(load: items(Item:NewLoad))
 	end
 
 	fireItem:
-	fun{$ ?ID ?KindFire}
-		fun{$ Player} ItemsLoaded Item MinePos Mines in
-			ID = Player.id
-			ItemsLoaded = {GetItemsLoaded Player}
-			if {List.length ItemsLoaded} > 0 then
-				Item = {GetRandElem ItemsLoaded}
-				{Show item#Item#loaded#preparationToFire}
-				case Item
-				of mine then
-					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
-					KindFire = mine(MinePos)
-				[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
-				[] drone then KindFire = drone(row 3)
-				[] sonar then KindFire = sonar
-				end
-				{Show Player.id.color#fireItem#Item}
-				if {IsDet MinePos} then Mines = MinePos|Player.mines
-				else Mines = Player.mines end
-
-				player(load:items(Item:Player.load.Item - Input.Item) mines:Mines)
-			else 
-				KindFire = null
-				player()
+	fun{$ ?ID ?KindFire Player} ItemsLoaded Item MinePos Mines in
+		ID = Player.id
+		ItemsLoaded = {GetItemsLoaded Player}
+		if {List.length ItemsLoaded} > 0 then
+			Item = {GetRandElem ItemsLoaded}
+			{Show item#Item#loaded#preparationToFire}
+			case Item
+			of mine then
+				MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
+				KindFire = mine(MinePos)
+			[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
+			[] drone then KindFire = drone(row 3)
+			[] sonar then KindFire = sonar
 			end
+			{Show Player.id.color#fireItem#Item}
+			if {IsDet MinePos} then Mines = MinePos|Player.mines
+			else Mines = Player.mines end
+
+			player(load:items(Item:Player.load.Item - Input.Item) mines:Mines)
+		else 
+			KindFire = null
+			player()
 		end
 	end
 
 	fireMine:
-	fun{$ ?ID ?Mine}
-		fun{$ Player}
-			ID = Player.id
-			case Player.mines 
-			of H|Mines andthen {OS.rand} mod 4 == 0 then
-				Mine=H
-				{Show Player.id.color#fireMine#H}
-				player(mines:Mines)
-			else Mine=null player()
-			end
+	fun{$ ?ID ?Mine Player}
+		ID = Player.id
+		case Player.mines 
+		of H|Mines andthen {OS.rand} mod 4 == 0 then
+			Mine=H
+			{Show Player.id.color#fireMine#H}
+			player(mines:Mines)
+		else Mine=null player()
 		end
 	end
 
 	isDead:
-	fun {$ ?Answer}
-		fun{$ Player}
-			Answer = Player.lifeLeft =< 0
-			player()
-		end
+	fun {$ ?Answer Player}
+		Answer = Player.lifeLeft =< 0
+		player()
 	end
 
 	sayMove:
-	fun {$ ID Direction}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Direction Player}
+		player()
 	end
 
 	saySurface:
-	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Player}
+		player()
 	end
 
 	sayCharge:
-	fun {$ ID KindItem}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID KindItem Player}
+		player()
 	end
 
 	sayMinePlaced:
-	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Player}
+		player()
 	end
 
 	sayMissileExplode:
-	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
-			player(lifeLeft: NewLifeLeft) 			
-		end
+	fun{$ ID Position ?Message Player} NewLifeLeft in
+		NewLifeLeft = {SayItemExplode Player Position ?Message}
+		player(lifeLeft: NewLifeLeft) 			
 	end
 	
 	sayMineExplode:
-	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
-			player(lifeLeft: NewLifeLeft)
-		end
+	fun{$ ID Position ?Message Player} NewLifeLeft in
+		NewLifeLeft = {SayItemExplode Player Position ?Message}
+		player(lifeLeft: NewLifeLeft)
 	end
 
 	sayPassingDrone:
-	fun{$ Drone ?ID ?Answer}
-		fun{$ Player}
-			ID = Player.id
-			Answer = false
-			player()
-		end
+	fun{$ Drone ?ID ?Answer Player}
+		ID = Player.id
+		Answer = false
+		player()
 	end
 
 	sayAnswerDrone:
-	fun{$ Drone ID Answer}
-		fun{$ Player}
-			player()
-		end
+	fun{$ Drone ID Answer Player}
+		player()
 	end
 
 	sayPassingSonar:
-	fun{$ ?ID ?Answer}
-		fun{$ Player}
-			ID = Player.id
-			Answer = pt(x: Player.position.x y: 3)
-			player()
-		end
+	fun{$ ?ID ?Answer Player}
+		ID = Player.id
+		Answer = pt(x: Player.position.x y: 3)
+		player()
 	end
 
 	sayAnswerSonar:
-	fun{$ ID Answer}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Answer Player}
+		player()
 	end
 
 	sayDeath:
-	fun{$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Player}
+		player()
 	end
 
 	sayDamageTaken:
-	fun{$ ID Damage LifeLeft}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Damage LifeLeft Player}
+		player()
 	end)
 
 
