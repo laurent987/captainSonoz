@@ -71,17 +71,12 @@ in
 			FunAnonyme
 			Args = {List.append {Record.toList Msg} [FunAnonyme]}
 			Fun = {Record.label Msg}
-			{Show Args}
 		in
 			if {Value.hasFeature Strategy Fun} then  
-				{Show ok}
 				{Procedure.apply Strategy.Fun Args}
-				{Show FunAnonyme}
 				NewSubsetState = {FunAnonyme State}
-				{Show NewSubsetState}
 				{TreatStream T {MergeState State NewSubsetState}}
 			else % Msg don't match with a strategy function.
-				{Show what}
 				{TreatStream T State}
 			end
 		end
@@ -92,7 +87,10 @@ in
 		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen ({Not {Record.is NewSubsetState.H}} orelse {List.is NewSubsetState.H}) then 
+			[] H|T andthen (
+					{Atom.is NewSubsetState.H} 
+					orelse {List.is NewSubsetState.H}
+					orelse {Not {Record.is NewSubsetState.H}}) then
 				{Loop {Record.adjoin
 						State
 						Label(H:NewSubsetState.H)} T}

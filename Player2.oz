@@ -20,6 +20,7 @@ define
     TreatStream 
 	MergeState
 	%%% Util functions for Strategy functions %%%
+	KeepDirection
 	GetDirection
 	GetItemsLoaded
 	IsLoaded
@@ -42,6 +43,7 @@ define
 	IsInsideMap
 	IsNotIsland
 	IsNotAlreadyGoThere
+	NotOnEdge
 	%%% Util %%%
 	GetRandIndex
 	GetRandElem
@@ -51,8 +53,9 @@ in
     fun{StartPlayer Color Id}
         Stream
 		StateInitial=player(
-			id:id(id:Id color:Color name:'Player')
+			id:id(id:Id color:Color name:'Player2')
 			position: pt(x:0 y:0)
+			direction:null
 			path: nil
 			lifeLeft: Input.maxDamage  			
 			surface:true		% true if the sub is on the surface
@@ -71,17 +74,12 @@ in
 			FunAnonyme
 			Args = {List.append {Record.toList Msg} [FunAnonyme]}
 			Fun = {Record.label Msg}
-			{Show Args}
 		in
 			if {Value.hasFeature Strategy Fun} then  
-				{Show ok}
 				{Procedure.apply Strategy.Fun Args}
-				{Show FunAnonyme}
 				NewSubsetState = {FunAnonyme State}
-				{Show NewSubsetState}
 				{TreatStream T {MergeState State NewSubsetState}}
 			else % Msg don't match with a strategy function.
-				{Show what}
 				{TreatStream T State}
 			end
 		end
@@ -92,7 +90,10 @@ in
 		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen ({Not {Record.is NewSubsetState.H}} orelse {List.is NewSubsetState.H}) then 
+			[] H|T andthen (
+					{Atom.is NewSubsetState.H} 
+					orelse {List.is NewSubsetState.H}
+					orelse {Not {Record.is NewSubsetState.H}}) then
 				{Loop {Record.adjoin
 						State
 						Label(H:NewSubsetState.H)} T}
@@ -111,10 +112,12 @@ in
 	Strategy = strategy(
 
     initPosition:
-    fun{$ ?ID ?Position Player}
-        ID=Player.id
-        Position = {GetPositionOnMap [IsNotIsland NotOnEdge]}
-        player(position:Position path:Position|Player.path)
+    fun{$ ?ID ?Position}
+		fun{$ Player}
+			ID=Player.id
+			Position = {GetPositionOnMap [IsNotIsland NotOnEdge]}
+			player(position:Position path:Position|Player.path)
+		end
     end
 
 	dive:
@@ -139,7 +142,7 @@ move:
 				player(surface:true path: Player.position|nil)
 			else 
 				Direction = {GetDirection Player.position Position}
-				{Show dir#Direction}
+				{Show direction#Direction}
 				player(position:Position direction:Direction path:Position|Player.path)
 			end
 		end
@@ -320,7 +323,7 @@ move:
         Pos 
         pt(x:X y:Y) = Player.position
     in
-        {Show Player.direction}
+		{Show dir#Player.direction}
         case Player.direction
         of west then Pos = pt(x:X y:Y-1)
         [] north then Pos = pt(x:X-1 y:Y)
