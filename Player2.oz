@@ -20,6 +20,7 @@ define
     TreatStream 
 	MergeState
 	%%% Util functions for Strategy functions %%%
+	KeepDirection
 	GetDirection
 	GetItemsLoaded
 	IsLoaded
@@ -54,6 +55,7 @@ in
 		StateInitial=player(
 			id:id(id:Id color:Color name:'Player')
 			position: pt(x:0 y:0)
+			direction: null
 			path: nil
 			lifeLeft: Input.maxDamage  			
 			surface:true		% true if the sub is on the surface
@@ -117,15 +119,21 @@ in
 	end
 
 	move:
-	fun{$ ID Position Direction Player} ValidPositions in
+	fun{$ ID Position Direction Player} ValidPositions PosTmp in
 		ID = Player.id
-		Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
+		PosTmp = {KeepDirection Player}
+		if PosTmp \= null then
+			Position = PosTmp
+		else
+			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
+		end
 		if Position == null then
 			Direction=surface
-			player(path: Player.position|nil)
+			player(surface:true path: Player.position|nil)
 		else 
 			Direction = {GetDirection Player.position Position}
-			player(position: Position path: Position|Player.path)
+			{Show dir#Direction}
+			player(position:Position direction:Direction path:Position|Player.path)
 		end
 	end
 	
@@ -268,6 +276,28 @@ in
 		Player.load.Item >= Input.Item
 	end
 
+	fun{KeepDirection Player}
+		Pos 
+		pt(x:X y:Y) = Player.position
+	in
+		{Show Player.direction}
+		case Player.direction
+		of west then Pos = pt(x:X y:Y-1)
+		[] north then Pos = pt(x:X-1 y:Y)
+		[] east then Pos = pt(x:X y:Y+1)
+		[] sud then Pos = pt(x:X+1 y:Y)
+		else Pos = null
+		end
+		{Show oldPos#Player.position#newPos#Pos}
+		if (Pos \= null
+			andthen {IsInsideMap Pos}
+			andthen {IsNotIsland Pos}
+			andthen {{IsNotAlreadyGoThere Player} Pos}) then
+				{Show pos#Pos}
+				Pos
+		else null end
+	end
+
 	fun{GetDirection CurrentPosition NextPosition}
 		pt(x:Cx y:Cy) = CurrentPosition
 		pt(x:Nx y:Ny) = NextPosition
@@ -328,7 +358,7 @@ in
 	fun{NotOnEdge Position}
 		pt(x:X y:Y) = Position
 	in
-		X \= NRow and Y \= NColumn
+		X \= NRow andthen Y \= NColumn
 	end
 
 	fun{IsNotAlreadyGoThere Player}

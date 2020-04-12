@@ -121,7 +121,7 @@ in
 		Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
 		if Position == null then
 			Direction=surface
-			player(path: Player.position|nil)
+			player(surface:true path: Player.position|nil)
 		else 
 			Direction = {GetDirection Player.position Position}
 			player(position: Position path: Position|Player.path)

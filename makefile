@@ -9,11 +9,14 @@ GUI.ozf: Input.ozf
 Input.ozf:
 	ozc -c Input.oz
 
-PlayerManager.ozf: Player.ozf PlayerHuman.ozf
+PlayerManager.ozf: Player.ozf Player2.ozf PlayerHuman.ozf
 	ozc -c PlayerManager.oz
 
 Player.ozf:
 	ozc -c Player.oz
+
+Player2.ozf:
+	ozc -c Player2.oz
 
 PlayerHuman.ozf:
 	ozc -c PlayerHuman.oz
@@ -27,6 +30,9 @@ clean:
 
 clean_player:
 	rm Player.ozf
+
+clean_player2:
+	rm Player2.ozf
 
 clean_human:
 	rm PlayerHuman.ozf
