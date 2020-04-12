@@ -31,7 +31,7 @@ define
 			end
 		end
 		fun {PlayTurn Player PlayerList} Dir in
-			{Delay 50}
+			{Delay 100}
 			if Player.surface then {Send Player.port dive} end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
