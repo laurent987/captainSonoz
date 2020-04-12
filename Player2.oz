@@ -127,8 +127,8 @@ in
 		end
 	end
 
-move:
-    fun{$ ID Position Direction}
+	move:
+	fun{$ ID Position Direction}
 		fun{$ Player} ValidPositions PosTmp in
 			ID = Player.id
 			PosTmp = {KeepDirection Player}
@@ -146,14 +146,13 @@ move:
 				player(position:Position direction:Direction path:Position|Player.path)
 			end
 		end
-    end
+	end
 	
 	chargeItem:
 	fun{$ ?ID ?KindItem}
 		fun{$ Player} Items Item NewLoad in
 			ID = Player.id
-			Items = {Record.arity Player.load}
-			Item = {GetRandElem Items}
+			Item = mine
 			NewLoad = Player.load.Item + 1
 			if NewLoad mod Input.Item == 0 then KindItem = Item
 			else KindItem = null end
@@ -195,7 +194,10 @@ move:
 		fun{$ Player}
 			ID = Player.id
 			case Player.mines 
-			of H|Mines andthen {OS.rand} mod 4 == 0 then
+			of H|Mines 
+					andthen {OS.rand} mod 4 == 0 
+					andthen {GetManhattanDst H Player.position} >= MinSecurityDstExplosion
+					then
 				Mine=H
 				{Show Player.id.color#fireMine#H}
 				player(mines:Mines)

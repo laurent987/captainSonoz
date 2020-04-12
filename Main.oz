@@ -10,7 +10,6 @@ define
 	GUI_port
 	X
 	proc {SimultateThinking}
-		{Show thinking}
 		{Delay Input.thinkMin + {OS.rand} mod (Input.thinkMax - Input.thinkMin)}
 	end
 	proc {NewGameTurnBased PlayerList}
@@ -24,7 +23,6 @@ define
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
 		% PL is the List of All the players alive
 		fun {RoundTable PlayersLeft PL}
-			{Delay 500}
 			case PlayersLeft of nil then nil
 			[] P|Pr andthen {Send P.port isDead($)} then {RoundTable Pr PL}
 			[] P|Pr andthen X in (X=P.turnToWait)>0 then
