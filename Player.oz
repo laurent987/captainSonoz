@@ -112,7 +112,7 @@ in
 	fun{$ ?ID ?Position}
 		fun{$ Player}
 			ID=Player.id
-			Position = {GetPositionOnMap [IsNotIsland]}
+			Position = pt(x:1 y:2) %{GetPositionOnMap [IsNotIsland]}
 			player(position:Position path:Position|Player.path)
 		end
 	end
@@ -358,7 +358,7 @@ in
 	fun{IsInsideMap Position}
 		pt(x:X y:Y) = Position
 	in
-		0 < X andthen X =< NRow andthen 0 < Y andthen Y =< NRow
+		0 < X andthen X =< NRow andthen 0 < Y andthen Y =< NColumn
 	end
 
 	fun{IsNotIsland Position}

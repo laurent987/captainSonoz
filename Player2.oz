@@ -325,7 +325,6 @@ in
         Pos 
         pt(x:X y:Y) = Player.position
     in
-		{Show dir#Player.direction}
         case Player.direction
         of west then Pos = pt(x:X y:Y-1)
         [] north then Pos = pt(x:X-1 y:Y)
@@ -333,7 +332,6 @@ in
         [] sud then Pos = pt(x:X+1 y:Y)
         else Pos = null
         end
-        {Show oldPos#Player.position#newPos#Pos}
         if (Pos \= null
             andthen {IsInsideMap Pos}
             andthen {IsNotIsland Pos}
@@ -403,7 +401,7 @@ in
 	fun{NotOnEdge Position}
         pt(x:X y:Y) = Position
     in
-        X \= NRow andthen Y \= NColumn
+        X > 1 andthen X < NRow andthen Y > 1 andthen Y < NColumn
     end
 
 
