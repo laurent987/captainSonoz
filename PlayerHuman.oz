@@ -15,12 +15,16 @@ define
 	ListMap
 	DamageDstZero = 2 	% if the Manhattan distance, between the submarine and the explosion,  
 	DamageDstOne = 1	% is 0 (resp. 1), the submarine gets 2 damages (resp. 1 damage).
-	MinSecurityDstExplosion = 2 % if the dst between the submarine and explosion  is greater or egal to 2 then no damage 
+	MinSecurityDstExplosion = 2 % if the dst between the submarine and explosion  is greater or egal to 2 then no damage
+	Handle
 	%%% Player %%%
     StartPlayer 
     TreatStream 
 	MergeState
 	%%% Window %%%
+	UpdateGUI
+	InitLoadGUI
+	InitInfoGUI
 	BuildWindow
 	DrawMap
 	Squares
@@ -56,7 +60,6 @@ in
 	%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}
         Stream
-		Handle
 		StateInitial=player(
 			id:id(id:Id color:Color name:'Player')
 			position: pt(x:0 y:0)
@@ -68,11 +71,13 @@ in
     in
 		ListMap = {MapToList Map}
 		Handle = {BuildWindow}
-        thread {TreatStream Stream StateInitial} end
+		{InitInfoGUI}
+        thread {TreatStream Stream StateInitial null} end
         {NewPort Stream}
     end
 
-	proc{TreatStream Stream State}
+	proc{TreatStream Stream State OldState}
+		{UpdateGUI State OldState}
 		case Stream of nil then skip
 		[] Msg|T then 
 			NewSubsetState
@@ -81,9 +86,9 @@ in
 		in
 			if {Value.hasFeature Strategy Fun} then  
 				{Procedure.apply Strategy.Fun Args}
-				{TreatStream T {MergeState State NewSubsetState}}
+				{TreatStream T {MergeState State NewSubsetState} State}
 			else % Msg don't match with a strategy function.
-				{TreatStream T State}
+				{TreatStream T State State}
 			end
 		end
 	end
@@ -107,16 +112,53 @@ in
 		{Loop State Arities}
 	end
 
+	proc{InitInfoGUI}
+		{Handle.info configure({Label 'lifeLeft'} row:0 column:0 sticky:wesn)}
+		{Handle.info configure({Label Input.maxDamage} row:0 column:1 sticky:wesn)}
+		{InitLoadGUI [mine missile drone sonar] 1}
+	end
+
+	proc{InitLoadGUI Items N}
+		case Items of nil then skip
+		[] H|T then 
+			{Handle.info configure({Label H} row:N column:0 sticky:wesn)}
+			{Handle.info configure({Label 0} row:N column:1 sticky:wesn)}
+			{Handle.info configure({Label sur} row:N column:2 sticky:wesn)}
+			{Handle.info configure({Label Input.H} row:N column:3 sticky:wesn)}
+			{InitLoadGUI T N+1}
+		end
+	end
+
+	proc{UpdateGUI State PrevState}
+		if PrevState==null then skip
+		else 
+			if State.lifeLeft \= PrevState.lifeLeft then
+				{Handle.info configure({Label State.lifeLeft} row:0 column:1)}
+			end
+			if State.load.mine \= PrevState.load.mine then
+				{Handle.info configure({Label State.load.mine} row:1 column:1)}
+			end
+			if State.load.missile \= PrevState.load.missile then
+				{Handle.info configure({Label State.load.missile} row:2 column:1)}
+			end
+			if State.load.drone \= PrevState.load.drone then
+				{Handle.info configure({Label State.load.drone} row:3 column:1)}
+			end
+			if State.load.sonar \= PrevState.load.sonar then
+				{Handle.info configure({Label State.load.sonar} row:4 column:1)}
+			end
+		end
+	end
 	
 	fun{BuildWindow}
-		HAction HStep HState HLayout
-		Toolbar Layout DescStep DescAction DescState Window
+		HAction HStep HInfo HLayout
+		Toolbar Layout DescStep DescAction DescInfo Window
 	in
 		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close))
 		Layout=grid(handle:HLayout height:50 width:80 glue:wesn)
 		DescStep=label(handle:HStep height:10 width:50 bg:blue glue:wesn)
 		DescAction=label(handle:HAction height:40 width:50 bg:red glue:wesn)
-		DescState=label(handle:HState text:"LifeLeft" height:50 width:30 bg:green glue:wesn)
+		DescInfo=grid(handle:HInfo bg:green glue:wesn)
 		Window={QTk.build td(Toolbar Layout)}
   
 		{Window show}
@@ -126,7 +168,7 @@ in
 		{HLayout columnconfigure(1 minsize:30 weight:2 pad:5)}
 
 		{HLayout configure(td(DescStep DescAction glue:wesn) row:0 column:0 sticky:wesn)}
-		{HLayout configure(DescState row:0 column:1 sticky:wesn)}
+		{HLayout configure(DescInfo row:0 column:1 sticky:wesn)}
 
 		% % configure rows and set headers
 		% {Grid rowconfigure(1 minsize:50 weight:0 pad:5)}
@@ -143,7 +185,7 @@ in
 
 		% {DrawMap Grid}
 
-		handle(action:HAction step:HStep state:HState)
+		handle(action:HAction step:HStep info:HInfo)
 	end
 
 	%%%%% Squares of water and island
