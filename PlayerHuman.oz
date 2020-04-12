@@ -1,5 +1,6 @@
 functor
 import
+	QTk at 'x-oz://system/wp/QTk.ozf'
     Input
 	OS
 	System(show:Show)
@@ -19,6 +20,11 @@ define
     StartPlayer 
     TreatStream 
 	MergeState
+	%%% Window %%%
+	BuildWindow
+	DrawMap
+	Squares
+	Label
 	%%% Util functions for Strategy functions %%%
 	GetDirection
 	GetItemsLoaded
@@ -50,6 +56,7 @@ in
 	%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}
         Stream
+		Handle
 		StateInitial=player(
 			id:id(id:Id color:Color name:'Player')
 			position: pt(x:0 y:0)
@@ -60,6 +67,7 @@ in
 			load: items(mine:0 missile:0 drone:0  sonar:0)) % number of charge for each item
     in
 		ListMap = {MapToList Map}
+		Handle = {BuildWindow}
         thread {TreatStream Stream StateInitial} end
         {NewPort Stream}
     end
@@ -68,13 +76,11 @@ in
 		case Stream of nil then skip
 		[] Msg|T then 
 			NewSubsetState
-			FunAnonyme
-			Args = {List.append {Record.toList Msg} [FunAnonyme]}
+			Args = {List.append {Record.toList Msg} [State NewSubsetState]}
 			Fun = {Record.label Msg}
 		in
 			if {Value.hasFeature Strategy Fun} then  
 				{Procedure.apply Strategy.Fun Args}
-				NewSubsetState = {FunAnonyme State}
 				{TreatStream T {MergeState State NewSubsetState}}
 			else % Msg don't match with a strategy function.
 				{TreatStream T State}
@@ -87,10 +93,7 @@ in
 		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen (
-					{Atom.is NewSubsetState.H} 
-					orelse {List.is NewSubsetState.H}
-					orelse {Not {Record.is NewSubsetState.H}}) then
+			[] H|T andthen ({Not {Record.is NewSubsetState.H}} orelse {List.is NewSubsetState.H}) then 
 				{Loop {Record.adjoin
 						State
 						Label(H:NewSubsetState.H)} T}
@@ -104,193 +107,229 @@ in
 		{Loop State Arities}
 	end
 
+	
+	fun{BuildWindow}
+		HAction HStep HState HLayout
+		Toolbar Layout DescStep DescAction DescState Window
+	in
+		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close))
+		Layout=grid(handle:HLayout height:50 width:80 glue:wesn)
+		DescStep=label(handle:HStep height:10 width:50 bg:blue glue:wesn)
+		DescAction=label(handle:HAction height:40 width:50 bg:red glue:wesn)
+		DescState=label(handle:HState text:"LifeLeft" height:50 width:30 bg:green glue:wesn)
+		Window={QTk.build td(Toolbar Layout)}
+  
+		{Window show}
+		{HLayout rowconfigure(0 minsize:50 weight:0 pad:5)}
+
+		{HLayout columnconfigure(0 minsize:50 weight:2 pad:5)}
+		{HLayout columnconfigure(1 minsize:30 weight:2 pad:5)}
+
+		{HLayout configure(td(DescStep DescAction glue:wesn) row:0 column:0 sticky:wesn)}
+		{HLayout configure(DescState row:0 column:1 sticky:wesn)}
+
+		% % configure rows and set headers
+		% {Grid rowconfigure(1 minsize:50 weight:0 pad:5)}
+		% for N in 1..NRow do
+		% 	{Grid rowconfigure(N+1 minsize:50 weight:0 pad:5)}
+		% 	{Grid configure({Label N} row:N+1 column:1 sticky:wesn)}
+		% end
+		% % configure columns and set headers
+		% {Grid columnconfigure(1 minsize:50 weight:0 pad:5)}
+		% for N in 1..NColumn do
+		% 	{Grid columnconfigure(N+1 minsize:50 weight:0 pad:5)}
+		% 	{Grid configure({Label N} row:1 column:N+1 sticky:wesn)}
+		% end
+
+		% {DrawMap Grid}
+
+		handle(action:HAction step:HStep state:HState)
+	end
+
+	%%%%% Squares of water and island
+	Squares = square(0:label(text:"" width:1 height:1 bg:c(102 102 255))
+			 1:label(text:"" borderwidth:5 relief:raised width:1 height:1 bg:c(153 76 0))
+			)
+
+	%%%%% Labels for rows and columns
+	fun{Label V}
+		label(text:V borderwidth:5 relief:raised bg:c(255 51 51) ipadx:5 ipady:5)
+	end
+
+	%%%%% Function to draw the map
+	proc{DrawMap Grid}
+		proc{DrawColumn Column M N}
+			case Column
+			of nil then skip
+			[] T|End then
+				{Grid configure(Squares.T row:M+1 column:N+1 sticky:wesn)}
+				{DrawColumn End M N+1}
+			end
+		end
+		proc{DrawRow Row M}
+			case Row
+			of nil then skip
+			[] T|End then
+				{DrawColumn T M 1}
+				{DrawRow End M+1}
+			end
+		end
+	in
+		{DrawRow Map 1}
+	end
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Strategy = strategy(
 
 	initPosition:
-	fun{$ ?ID ?Position}
-		fun{$ Player}
-			ID=Player.id
-			Position = {GetPositionOnMap [IsNotIsland]}
-			player(position:Position path:Position|Player.path)
-		end
+	fun{$ ?ID ?Position Player}
+		ID=Player.id
+		Position = {GetPositionOnMap [IsNotIsland]}
+		player(position:Position path:Position|Player.path)
 	end
 
 	dive:
-	fun{$}
-		fun{$ Player}
-			player(surface:false)
-		end
+	fun{$ Player}
+		player(surface:false)
 	end
 
 	move:
-	fun{$ ID Position Direction}
-		fun{$ Player} ValidPositions in
-			ID = Player.id
-			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
-			if Position == null then
-				Direction=surface
-				player(surface:true path: Player.position|nil)
-			else 
-				Direction = {GetDirection Player.position Position}
-				player(position: Position path: Position|Player.path)
-			end
+	fun{$ ID Position Direction Player} ValidPositions in
+		ID = Player.id
+		Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
+		if Position == null then
+			Direction=surface
+			player(path: Player.position|nil)
+		else 
+			Direction = {GetDirection Player.position Position}
+			player(position: Position path: Position|Player.path)
 		end
 	end
 	
 	chargeItem:
-	fun{$ ?ID ?KindItem}
-		fun{$ Player} Items Item NewLoad in
-			ID = Player.id
-			Items = {Record.arity Player.load}
-			Item = {GetRandElem Items}
-			NewLoad = Player.load.Item + 1
-			if NewLoad mod Input.Item == 0 then KindItem = Item
-			else KindItem = null end
-			{Show Player.id.color#chargeItem#Item#NewLoad}
-			player(load: items(Item:NewLoad))
-		end
+	fun{$ ?ID ?KindItem Player} Items Item NewLoad in
+		ID = Player.id
+		Items = {Record.arity Player.load}
+		Item = {GetRandElem Items}
+		NewLoad = Player.load.Item + 1
+		if NewLoad mod Input.Item == 0 then KindItem = Item
+		else KindItem = null end
+		{Show Player.id.color#chargeItem#Item#NewLoad}
+		player(load: items(Item:NewLoad))
 	end
 
 	fireItem:
-	fun{$ ?ID ?KindFire}
-		fun{$ Player} ItemsLoaded Item MinePos Mines in
-			ID = Player.id
-			ItemsLoaded = {GetItemsLoaded Player}
-			if {List.length ItemsLoaded} > 0 then
-				Item = {GetRandElem ItemsLoaded}
-				{Show item#Item#loaded#preparationToFire}
-				case Item
-				of mine then
-					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
-					KindFire = mine(MinePos)
-				[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
-				[] drone then KindFire = drone(row 3)
-				[] sonar then KindFire = sonar
-				end
-				{Show Player.id.color#fireItem#Item}
-				if {IsDet MinePos} then Mines = MinePos|Player.mines
-				else Mines = Player.mines end
-
-				player(load:items(Item:Player.load.Item - Input.Item) mines:Mines)
-			else 
-				KindFire = null
-				player()
+	fun{$ ?ID ?KindFire Player} ItemsLoaded Item MinePos Mines in
+		ID = Player.id
+		ItemsLoaded = {GetItemsLoaded Player}
+		if {List.length ItemsLoaded} > 0 then
+			Item = {GetRandElem ItemsLoaded}
+			{Show item#Item#loaded#preparationToFire}
+			case Item
+			of mine then
+				MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
+				KindFire = mine(MinePos)
+			[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
+			[] drone then KindFire = drone(row 3)
+			[] sonar then KindFire = sonar
 			end
+			{Show Player.id.color#fireItem#Item}
+			if {IsDet MinePos} then Mines = MinePos|Player.mines
+			else Mines = Player.mines end
+
+			player(load:items(Item:Player.load.Item - Input.Item) mines:Mines)
+		else 
+			KindFire = null
+			player()
 		end
 	end
 
 	fireMine:
-	fun{$ ?ID ?Mine}
-		fun{$ Player}
-			ID = Player.id
-			case Player.mines 
-			of H|Mines andthen {OS.rand} mod 4 == 0 then
-				Mine=H
-				{Show Player.id.color#fireMine#H}
-				player(mines:Mines)
-			else Mine=null player()
-			end
+	fun{$ ?ID ?Mine Player}
+		ID = Player.id
+		case Player.mines 
+		of H|Mines andthen {OS.rand} mod 4 == 0 then
+			Mine=H
+			{Show Player.id.color#fireMine#H}
+			player(mines:Mines)
+		else Mine=null player()
 		end
 	end
 
 	isDead:
-	fun {$ ?Answer}
-		fun{$ Player}
-			Answer = Player.lifeLeft =< 0
-			player()
-		end
+	fun {$ ?Answer Player}
+		Answer = Player.lifeLeft =< 0
+		player()
 	end
 
 	sayMove:
-	fun {$ ID Direction}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Direction Player}
+		player()
 	end
 
 	saySurface:
-	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Player}
+		player()
 	end
 
 	sayCharge:
-	fun {$ ID KindItem}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID KindItem Player}
+		player()
 	end
 
 	sayMinePlaced:
-	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun {$ ID Player}
+		player()
 	end
 
 	sayMissileExplode:
-	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
-			player(lifeLeft: NewLifeLeft) 	
-		end		
+	fun{$ ID Position ?Message Player} NewLifeLeft in
+		NewLifeLeft = {SayItemExplode Player Position ?Message}
+		player(lifeLeft: NewLifeLeft) 			
 	end
 	
 	sayMineExplode:
-	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
-			player(lifeLeft: NewLifeLeft)
-		end
+	fun{$ ID Position ?Message Player} NewLifeLeft in
+		NewLifeLeft = {SayItemExplode Player Position ?Message}
+		player(lifeLeft: NewLifeLeft)
 	end
 
 	sayPassingDrone:
-	fun{$ Drone ?ID ?Answer}
-		fun{$ Player}
-			ID = Player.id
-			Answer = false
-			player()
-		end
+	fun{$ Drone ?ID ?Answer Player}
+		ID = Player.id
+		Answer = false
+		player()
 	end
 
 	sayAnswerDrone:
-	fun{$ Drone ID Answer}
-		fun{$ Player}
-			player()
-		end
+	fun{$ Drone ID Answer Player}
+		player()
 	end
 
 	sayPassingSonar:
-	fun{$ ?ID ?Answer}
-		fun{$ Player}
-			ID = Player.id
-			Answer = pt(x: Player.position.x y: 3)
-			player()
-		end
+	fun{$ ?ID ?Answer Player}
+		ID = Player.id
+		Answer = pt(x: Player.position.x y: 3)
+		player()
 	end
 
 	sayAnswerSonar:
-	fun{$ ID Answer}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Answer Player}
+		player()
 	end
 
 	sayDeath:
-	fun{$ ID}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Player}
+		player()
 	end
 
 	sayDamageTaken:
-	fun{$ ID Damage LifeLeft}
-		fun{$ Player}
-			player()
-		end
+	fun{$ ID Damage LifeLeft Player}
+		player()
 	end)
 
 
