@@ -42,6 +42,7 @@ define
 	IsInsideMap
 	IsNotIsland
 	IsNotAlreadyGoThere
+	NotOnEdge
 	%%% Util %%%
 	GetRandIndex
 	GetRandElem
@@ -106,7 +107,7 @@ in
 	initPosition:
 	fun{$ ?ID ?Position Player}
 		ID=Player.id
-		Position = {GetPositionOnMap [IsNotIsland]}
+		Position = {GetPositionOnMap [IsNotIsland NotOnEdge]}
 		player(position:Position path:Position|Player.path)
 	end
 
@@ -322,6 +323,12 @@ in
 		pt(x:X y:Y) = Position
 	in
 		{List.nth ListMap (X-1)*NColumn + Y} == 0
+	end
+
+	fun{NotOnEdge Position}
+		pt(x:X y:Y) = Position
+	in
+		X \= NRow and Y \= NColumn
 	end
 
 	fun{IsNotAlreadyGoThere Player}
