@@ -188,7 +188,6 @@ in
 			case Player.mines 
 			of H|Mines andthen {OS.rand} mod 4 == 0 then
 				Mine=H
-				{Show Player.id.color#fireMine#H}
 				player(mines:Mines)
 			else Mine=null player()
 			end

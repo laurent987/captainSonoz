@@ -165,7 +165,7 @@ in
 		fun{RemoveMine Position}
 			fun{$ Grid State}
 				ID HandleScore Handle Mine Path NewMine
-				in
+			in
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
 				NewMine = {RmMine Grid Position Mine}
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:NewMine path:Path)
@@ -253,6 +253,7 @@ in
 	end
 
 	proc{TreatStream Stream Grid State}
+		{Show guiTreatStream}
 		case Stream
 		of nil then skip
 		[] buildWindow(X)|T then NewGrid in 
@@ -263,10 +264,10 @@ in
 			NewState = {DrawSubmarine Grid ID Position}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then
+			{Show guiMove#Position}
 			{TreatStream T Grid {StateModification Grid ID State {MoveSubmarine Position}}}
 		[] lifeUpdate(ID Life)|T then
 			{TreatStream T Grid {StateModification Grid ID State {UpdateLife Life}}}
-			{TreatStream T Grid State}
 		[] putMine(ID Position)|T then 
 			{TreatStream T Grid {StateModification Grid ID State {DrawMine Position}}}
 		[] removeMine(ID Position)|T then

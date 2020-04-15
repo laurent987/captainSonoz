@@ -27,6 +27,7 @@ clean:
 	rm Input.ozf
 	rm GUI.ozf
 	rm Player.ozf
+	rm PlayerHuman.ozf
 
 clean_player:
 	rm Player.ozf

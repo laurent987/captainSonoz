@@ -31,7 +31,7 @@ define
 			end
 		end
 		fun {PlayTurn Player PlayerList} Dir in
-			{Delay 100}
+			{Delay Input.guiDelay}
 			if Player.surface then {Send Player.port dive} end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
@@ -140,6 +140,7 @@ define
 			{Send GUI_port surface(Id)}
 			surface
 		else
+			{Show mainMove#Position}
 			{Send GUI_port movePlayer(Id Position)}
 			{Broadcast sayMove(Id Direction) PlayerList}
 			continue
