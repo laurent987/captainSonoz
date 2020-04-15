@@ -12,14 +12,24 @@ Input.ozf:
 PlayerManager.ozf: Player.ozf Player2.ozf PlayerHuman.ozf
 	ozc -c PlayerManager.oz
 
-Player.ozf:
+Player.ozf: PositionManagment.ozf Util.ozf Filters.ozf
 	ozc -c Player.oz
 
-Player2.ozf:
+Player2.ozf: PositionManagment.ozf Util.ozf Filters.ozf
 	ozc -c Player2.oz
 
 PlayerHuman.ozf:
 	ozc -c PlayerHuman.oz
+
+PositionManagment.ozf: Filters.ozf
+	ozc -c PositionManagment.oz
+
+Filters.ozf:
+	ozc -c Filters.oz
+
+Util.ozf:
+	ozc -c Util.oz
+
 
 
 clean:
@@ -27,6 +37,9 @@ clean:
 	rm Input.ozf
 	rm GUI.ozf
 	rm Player.ozf
+	rm PositionManagment.ozf
+	rm Filters.ozf
+	rm Util.ozf
 
 clean_player:
 	rm Player.ozf
