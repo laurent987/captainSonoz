@@ -31,17 +31,18 @@ define
 			end
 		end
 		fun {PlayTurn Player PlayerList} Dir in
-			{Delay 100}
+			{Show '//// Turn of player'#Player.color#' ////'}
+			{Delay Input.guiDelay}
 			if Player.surface then {Send Player.port dive} end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
 				{Record.adjoin Player player(turnToWait: Input.turnSurface surface:true)}
-			else
+			elseif Dir==continue then
 				{ChargeItem Player PlayerList}
 				{FireItem Player PlayerList}
 				{FireMine Player PlayerList}
 				Player
-			end
+			else Player end
 		end
 	in
 		{LoopGame PlayerList}
@@ -81,10 +82,13 @@ define
                     if (Input.isTurnByTurn) then 
                         player( port:{PlayerManager.playerGenerator H1 H2 IdNum}
 								id: IdNum
+								color: H2
 								surface:true
                                 turnToWait:0)|{Loop T1 T2 IdNum+1}
                     else
                         player(	port:{PlayerManager.playerGenerator H1 H2 IdNum}
+								id: IdNum
+								color: H2
 								surface:true)|{Loop T1 T2 IdNum+1} 
                     end
                 end
@@ -97,9 +101,7 @@ define
 		PlayerID Position
 	in
 		{Send Player.port initPosition(?PlayerID ?Position)}
-		{Show waitID}
 		{Wait PlayerID}
-		{Show id#PlayerID}
 		{Wait Position}
 		{Send GUI_port initPlayer(PlayerID Position)}
 	end
@@ -148,7 +150,7 @@ define
 				{Broadcast sayMove(ID Direction) PlayerList}
 				continue
 			end
-		end
+		else dead end
 	end
 	proc {ChargeItem Player PLayerList} ID KindItem in
 		{Send Player.port chargeItem(?ID ?KindItem)}

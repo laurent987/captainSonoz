@@ -68,7 +68,7 @@ in
 		Fun = {Record.label Msg}
 	in
 		{BoundId Args Msg State}
-		if {Value.hasFeature Strategy Fun} then 
+		if {Value.hasFeature Strategy Fun} andthen {Not {IsDead State}} then 
 			{Procedure.apply Strategy.Fun Args}
 			{FunAnonyme State}
 		else player() end
@@ -80,7 +80,8 @@ in
 		fun{Loop State Arities}
 			case Arities of nil then State
 			[] H|T andthen (
-					{Atom.is NewSubsetState.H} 
+					{Atom.is NewSubsetState.H}
+					orelse {Bool.is NewSubsetState.H}  
 					orelse {List.is NewSubsetState.H}
 					orelse {Not {Record.is NewSubsetState.H}}) then
 				{Loop {Record.adjoin
@@ -241,7 +242,7 @@ in
 	
 	sayMineExplode:
 	fun{$ ID Position ?Message}
-		fun{$ Player}
+		fun{$ Player} S in 
 			{SayItemExplode Player Position Damages ?Message}
 		end
 	end

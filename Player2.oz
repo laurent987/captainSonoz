@@ -38,7 +38,7 @@ in
     fun{StartPlayer Color Id}
         Stream
 		StateInitial=player(
-			id:id(id:Id color:Color name:'Player')
+			id:id(id:Id color:Color name:'Player2')
 			position:pt(x:0 y:0)
 			direction:null
 			path:nil
@@ -81,7 +81,8 @@ proc{TreatStream Stream State}
 		fun{Loop State Arities}
 			case Arities of nil then State
 			[] H|T andthen (
-					{Atom.is NewSubsetState.H} 
+					{Atom.is NewSubsetState.H}
+					orelse {Bool.is NewSubsetState.H} 
 					orelse {List.is NewSubsetState.H}
 					orelse {Not {Record.is NewSubsetState.H}}) then
 				{Loop {Record.adjoin
@@ -201,7 +202,7 @@ proc{TreatStream Stream State}
 		fun{$ Player}
 			case Player.mines 
 			of H|Mines 
-					andthen {OS.rand} mod 4 == 0 
+					andthen {OS.rand} mod 3 == 0 
 					andthen {GetManhattanDst H Player.position} >= MinSecurityDstExplosion
 					then
 				Mine=H
