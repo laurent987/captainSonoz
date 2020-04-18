@@ -6,10 +6,10 @@ import
 	PositionManager(mapToList:MapToList generateMapPosition:GenerateMapPosition generateManhattanPositions:GenerateManhattanPositions
 		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
 		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
-		getManhattanDst:GetManhattanDst	getDirection:GetDirection)
+		getManhattanDst:GetManhattanDst	getDirection:GetDirection) 
 	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
-		sayItemExplode:SayItemExplode damageSustained:DamageSustained)
-	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere)
+		sayItemExplode:SayItemExplode damageSustained:DamageSustained) 
+	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere) 
 export
     portPlayer:StartPlayer
 define
@@ -35,7 +35,8 @@ in
 			id:id(id:Id color:Color name:'Player')
 			position: pt(x:0 y:0)
 			path: nil
-			lifeLeft: Input.maxDamage  			
+			lifeLeft: Input.maxDamage
+			dead:false  			
 			surface:true		% true if the sub is on the surface
 			mines:nil			% mines=[mine_1(<position),..., mine_n(<position)]
 			load: items(mine:0 missile:0 drone:0  sonar:0)) % number of charge for each item
@@ -44,6 +45,9 @@ in
         thread {TreatStream Stream StateInitial} end
         {NewPort Stream}
     end
+
+	proc{GetNewSubsetState Args Fun}
+	end
 
 	proc{TreatStream Stream State}
 		case Stream of nil then skip
@@ -186,30 +190,22 @@ in
 
 	sayMove:
 	fun {$ ID Direction}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	saySurface:
 	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayCharge:
 	fun {$ ID KindItem}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayMinePlaced:
 	fun {$ ID}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayMissileExplode:
@@ -239,9 +235,7 @@ in
 
 	sayAnswerDrone:
 	fun{$ Drone ID Answer}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayPassingSonar:
@@ -255,22 +249,16 @@ in
 
 	sayAnswerSonar:
 	fun{$ ID Answer}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayDeath:
 	fun{$ ID}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end
 
 	sayDamageTaken:
 	fun{$ ID Damage LifeLeft}
-		fun{$ Player}
-			player()
-		end
+		fun{$ Player} player() end
 	end)
 end

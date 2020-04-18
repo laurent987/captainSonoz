@@ -1,8 +1,8 @@
 functor
 import
-	Player
-	Player2
-	PlayerHuman
+	Player 
+	Player2 
+	PlayerHuman 
 export
 	playerGenerator:PlayerGenerator
 define

@@ -55,5 +55,4 @@ in
 		if{Value.hasFeature Damages Dst} then Damages.Dst
 		else 0 end
 	end
-
 end

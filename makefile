@@ -1,51 +1,46 @@
+
 all: sonoz
 
-sonoz: GUI.ozf Input.ozf PlayerManager.ozf
-	ozc -c Main.oz
+sonoz: out/GUI.ozf out/Input.ozf out/PlayerManager.ozf
+	ozc -c Main.oz -o out/Main.ozf
 
-GUI.ozf: Input.ozf
-	ozc -c GUI.oz
+out/GUI.ozf: out/Input.ozf
+	ozc -c GUI.oz -o out/GUI.ozf
 
-Input.ozf:
-	ozc -c Input.oz
+out/Input.ozf:
+	ozc -c Input.oz -o out/Input.ozf
 
-PlayerManager.ozf: Player.ozf Player2.ozf PlayerHuman.ozf
-	ozc -c PlayerManager.oz
+out/PlayerManager.ozf: out/Player.ozf out/Player2.ozf out/PlayerHuman.ozf
+	ozc -c PlayerManager.oz -o out/PlayerManager.ozf
 
-Player.ozf: PositionManagment.ozf Util.ozf Filters.ozf
-	ozc -c Player.oz
+out/Player.ozf: out/PositionManager.ozf out/Util.ozf out/Filters.ozf
+	ozc -c Player.oz -o out/Player.ozf
 
-Player2.ozf: PositionManagment.ozf Util.ozf Filters.ozf
-	ozc -c Player2.oz
+out/Player2.ozf: out/PositionManager.ozf out/Util.ozf out/Filters.ozf
+	ozc -c Player2.oz -o out/Player2.ozf
 
-PlayerHuman.ozf:
-	ozc -c PlayerHuman.oz
+out/PlayerHuman.ozf:
+	ozc -c PlayerHuman.oz -o out/PlayerHuman.ozf
 
-PositionManagment.ozf: Filters.ozf
-	ozc -c PositionManagment.oz
+out/PositionManager.ozf: out/Filters.ozf
+	ozc -c PositionManager.oz -o out/PositionManager.ozf
 
-Filters.ozf:
-	ozc -c Filters.oz
+out/Filters.ozf: out/PositionManager.ozf
+	ozc -c Filters.oz -o out/Filters.ozf
 
-Util.ozf:
-	ozc -c Util.oz
+out/Util.ozf:
+	ozc -c Util.oz -o out/Util.ozf
 
 
 
 clean:
-	rm Main.ozf
-	rm Input.ozf
-	rm GUI.ozf
-	rm Player.ozf
-	rm PositionManagment.ozf
-	rm Filters.ozf
-	rm Util.ozf
+	rm -f out/*.ozf
 
 clean_player:
-	rm Player.ozf
+	rm out/Player.ozf
 
 clean_player2:
-	rm Player2.ozf
+	rm out/Player2.ozf
 
 clean_human:
-	rm PlayerHuman.ozf
+	rm out/PlayerHuman.ozf

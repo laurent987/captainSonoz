@@ -15,6 +15,9 @@ export
 	getPositionsAround2: GetPositionsAround2
 	getManhattanDst: GetManhattanDst
 	getDirection:GetDirection
+	keepDirection:KeepDirection
+	getNRow:GetNRow
+	getNColumn:GetNColumn
 define
 	MapToList
 	GenerateMapPosition
@@ -27,6 +30,7 @@ define
 	GetPositionsAround2
 	GetManhattanDst
 	GetDirection
+	KeepDirection
 	GetNRow
 	GetNColumn
 in
@@ -126,4 +130,25 @@ in
 	fun{GetNColumn Map}
 		{List.length Map.1}
 	end
+
+	fun{KeepDirection Player Map}
+        Pos 
+        pt(x:X y:Y) = Player.position
+    in
+        case Player.direction
+        of west then Pos = pt(x:X y:Y-1)
+        [] north then Pos = pt(x:X-1 y:Y)
+        [] east then Pos = pt(x:X y:Y+1)
+        [] south then Pos = pt(x:X+1 y:Y)
+        else Pos = null
+        end
+        if (Pos \= null
+            	andthen {{IsInsideMap Map} Pos}
+            	andthen {{IsNotIsland {MapToList Map} {GetNColumn Map}} Pos}
+            	andthen {{IsNotAlreadyGoThere Player.path} Pos}) then
+            Pos
+        else
+			null
+		end
+    end
 end

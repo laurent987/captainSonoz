@@ -1,16 +1,20 @@
 functor
+import
+	PositionManager(getNRow:GetNRow getNColumn:GetNColumn)
 export
 	applyFilters: ApplyFilters
 	filterGeneric: FilterGeneric
 	isInsideMap: IsInsideMap
 	isNotIsland: IsNotIsland
 	isNotAlreadyGoThere: IsNotAlreadyGoThere
+	isNotOnEdge:IsNotOnEdge
 define
 	ApplyFilters
 	FilterGeneric
 	IsInsideMap
 	IsNotIsland
 	IsNotAlreadyGoThere
+	IsNotOnEdge
 in
 	fun{ApplyFilters Filters Ys}
 		thread
@@ -56,5 +60,13 @@ in
 		in
 			{Loop Path Position}
 		end			
+	end
+
+	fun{IsNotOnEdge Map}
+		fun{$ Position}
+			pt(x:X y:Y) = Position
+		in
+			X > 1 andthen X < {GetNRow Map} andthen Y > 1 andthen Y < {GetNColumn Map}
+		end
 	end
 end

@@ -3,8 +3,13 @@ import
     Input
 	OS
 	System(show:Show)
-	Utils
-	PositionManagement
+	PositionManager(mapToList:MapToList generateMapPosition:GenerateMapPosition generateManhattanPositions:GenerateManhattanPositions
+		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
+		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
+		getManhattanDst:GetManhattanDst	getDirection:GetDirection keepDirection:KeepDirection) 
+	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
+		sayItemExplode:SayItemExplode damageSustained:DamageSustained)
+	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere isNotOnEdge:IsNotOnEdge)
 export
     portPlayer:StartPlayer
 define
@@ -13,6 +18,7 @@ define
 	Map = Input.map
 	NRow = Input.nRow
 	NColumn = Input.nColumn
+	Load=load(missile:Input.missile mine:Input.mine sonar:Input.sonar drone:Input.drone)
 	ListMap
 	DamageDstZero = 2 	% if the Manhattan distance, between the submarine and the explosion,  
 	DamageDstOne = 1	% is 0 (resp. 1), the submarine gets 2 damages (resp. 1 damage).
@@ -21,41 +27,12 @@ define
     StartPlayer 
     TreatStream 
 	MergeState
-	%%% Util functions for Strategy functions %%%
-	KeepDirection
-	GetDirection
-	GetItemsLoaded
-	IsLoaded
-	SayItemExplode
-	DamageSustained
-	%%% Position Management %%%
-	MapToList
-	GenerateMapPosition
-	GenerateManhattanPositions
-	GetPositionsOnMap
-	GetPositionOnMap
-	GetPositionAround
-	GetPositionsAround
-	GetPositionAround2
-	GetPositionsAround2
-	GetManhattanDst
-	%%% Filters  %%%
-	ApplyFilters
-	FilterGeneric
-	IsInsideMap
-	IsNotIsland
-	IsNotAlreadyGoThere
-	NotOnEdge
-	%%% Util %%%
-	GetRandIndex
-	GetRandElem
-	
 in
 	%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}
         Stream
 		StateInitial=player(
-			id:id(id:Id color:Color name:'Player2')
+			id:id(id:Id color:Color name:'Player')
 			position: pt(x:0 y:0)
 			direction:null
 			path: nil
@@ -117,7 +94,7 @@ in
     fun{$ ?ID ?Position}
 		fun{$ Player}
 			ID=Player.id
-			Position = {GetPositionOnMap [IsNotIsland NotOnEdge]}
+			Position = {GetPositionOnMap Map [{IsNotIsland ListMap NColumn} {IsNotOnEdge Map}]}
 			player(position:Position path:Position|Player.path)
 		end
     end
@@ -133,11 +110,11 @@ in
 	fun{$ ID Position Direction}
 		fun{$ Player} ValidPositions PosTmp in
 			ID = Player.id
-			PosTmp = {KeepDirection Player}
+			PosTmp = {KeepDirection Player Map}
 			if PosTmp \= null then
 				Position = PosTmp
 			else
-				Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player}]}
+			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player.path}] Map}
 			end
 			if Position == null then
 				Direction=surface
@@ -167,15 +144,15 @@ in
 	fun{$ ?ID ?KindFire}
 		fun{$ Player} ItemsLoaded Item MinePos Mines in
 			ID = Player.id
-			ItemsLoaded = {GetItemsLoaded Player}
+			ItemsLoaded = {GetItemsLoaded Player Load}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
 				{Show item#Item#loaded#preparationToFire}
 				case Item
 				of mine then
-					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil}
+					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil Map}
 					KindFire = mine(MinePos)
-				[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil})
+				[] missile then KindFire = missile({GetPositionAround2 Player.position Input.minDistanceMissile Input.maxDistanceMissile nil Map})
 				[] drone then KindFire = drone(row 3)
 				[] sonar then KindFire = sonar
 				end
@@ -247,7 +224,7 @@ in
 	sayMissileExplode:
 	fun{$ ID Position ?Message}
 		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
+			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
 			player(lifeLeft: NewLifeLeft) 	
 		end		
 	end
@@ -255,7 +232,7 @@ in
 	sayMineExplode:
 	fun{$ ID Position ?Message}
 		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position ?Message}
+			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
 			player(lifeLeft: NewLifeLeft)
 		end
 	end
@@ -305,207 +282,4 @@ in
 			player()
 		end
 	end)
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Util function for Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{GetItemsLoaded Player}
-		fun{Loop Player Items}
-			case Items of nil then nil
-			[] Item|T andthen {IsLoaded Player Item} then Item|{Loop Player T}
-			[] _|T then {Loop Player T} end		
-		end
-	in
-		{Loop Player {Record.arity Player.load}}
-	end
-
-	fun{IsLoaded Player Item}
-		Player.load.Item >= Input.Item
-	end
-
-	fun{KeepDirection Player}
-        Pos 
-        pt(x:X y:Y) = Player.position
-    in
-        case Player.direction
-        of west then Pos = pt(x:X y:Y-1)
-        [] north then Pos = pt(x:X-1 y:Y)
-        [] east then Pos = pt(x:X y:Y+1)
-        [] south then Pos = pt(x:X+1 y:Y)
-        else Pos = null
-        end
-        if (Pos \= null
-            	andthen {IsInsideMap Pos}
-            	andthen {IsNotIsland Pos}
-            	andthen {{IsNotAlreadyGoThere Player} Pos}) then
-            Pos
-        else
-			null
-		end
-    end
-
-
-	fun{GetDirection CurrentPosition NextPosition}
-		pt(x:Cx y:Cy) = CurrentPosition
-		pt(x:Nx y:Ny) = NextPosition
-	in
-		case (Nx-Cx)#(Ny-Cy)
-		of 0#~1 then west
-		[] ~1#0 then north
-		[] 0#1 then east
-		else south end
-	end
-
-	fun{SayItemExplode Player Position ?Message} Damage NewLifeLeft in
-		Damage = {DamageSustained Player Position}
-		NewLifeLeft = Player.lifeLeft - Damage
-		if NewLifeLeft =< 0 then Message = sayDeath(Player.id)
-		elseif Damage == 0 then	Message = null
-		else Message = sayDamageTaken(Player.id Damage NewLifeLeft) end
-		NewLifeLeft 			
-	end
-
-	fun{DamageSustained Player PositionExplosion}
-		case {GetManhattanDst Player.position PositionExplosion}
-		of 0 then DamageDstZero
-		[] 1 then DamageDstOne
-		else 0 end
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% FILTERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	
-	fun{ApplyFilters Filters Ys}
-		thread
-			case Filters of nil then Ys
-			[] Filter|Fs then Zs in
-				Zs = {FilterGeneric Ys Filter}
-				{ApplyFilters Fs Zs}
-			end 
-		end
-	end
-
-	fun{FilterGeneric Ys F}
-		case Ys of nil then nil
-		[] H|T andthen {F H} then H|{FilterGeneric T F}
-		[] _|T then {FilterGeneric T F} end
-	end 
-
-	fun{IsInsideMap Position}
-		pt(x:X y:Y) = Position
-	in
-		0 < X andthen X =< NRow andthen 0 < Y andthen Y =< NRow
-	end
-
-	fun{IsNotIsland Position}
-		pt(x:X y:Y) = Position
-	in
-		{List.nth ListMap (X-1)*NColumn + Y} == 0
-	end
-
-	fun{NotOnEdge Position}
-        pt(x:X y:Y) = Position
-    in
-        X > 1 andthen X < NRow andthen Y > 1 andthen Y < NColumn
-    end
-
-
-	fun{IsNotAlreadyGoThere Player}
-		fun{$ Position}
-			fun{Loop Path Position}
-				case Path of nil then true
-				[] H|T andthen H\=Position then {Loop T Position}
-				else false end
-			end
-		in
-			{Loop Player.path Position}
-		end			
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Position Management %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{MapToList Map}
-		fun{GetRow Row X}
-			case Row of nil then X
-			[] H|T then H|{GetRow T X}
-			end
-		end
-		proc{Loop Rows R}
-			case Rows of nil then R=nil
-			[] List|End then X in 
-				R = {GetRow List X}
-				{Loop End X}
-			end
-		end
-	in
-		{Loop Map $}
-	end
-
-	fun{GenerateMapPosition Row Col}
-		fun{Loop I J}
-			if I == Row+1 then nil
-			elseif J == Col+1 then {Loop I+1 1}
-			else pt(x:I y:J)|{Loop I J+1} end  
-		end
-	in
-		{Loop 1 1}
-	end
-
-	fun{GetPositionsOnMap Filters} S in
-		S = thread {GenerateMapPosition NRow NColumn} end
-		{ApplyFilters Filters S}
-	end
-
-	fun{GetPositionOnMap Filters}
-		{GetRandElem {GetPositionsOnMap Filters}}
-	end
-
-	fun{GenerateManhattanPositions Position Min Max}
-		pt(x:X y:Y) = Position
-		fun{Loop Min Max I J} NextPos=pt(x:X+I y:Y+J) in
-			if I == Max+1 then nil
-			elseif J == Max+1 then {Loop Min Max I+1 ~Max}
-			elseif {Abs I}+{Abs J} =< Max andthen {Abs I}+{Abs J} >= Min then
-				NextPos|{Loop Min Max I J+1}
-			else {Loop Min Max I J+1} end
-		end
-	in
-		{Loop Min Max ~Max ~Max}
-	end
-
-	fun{GetPositionsAround Position Min Max Filters} S in
-		S = thread {GenerateManhattanPositions Position Min Max} end
-		{ApplyFilters Filters S}
-	end
-
-	fun{GetPositionAround Position Min Max Filters}
-		{GetRandElem {GetPositionsAround Position Min Max Filters}}
-	end
-
-	fun{GetPositionsAround2 Position Min Max Filters}
-		NewFilters = IsInsideMap|IsNotIsland|Filters
-	in
-		{GetPositionsAround Position Min Max NewFilters}
-	end
-
-	fun{GetPositionAround2 Position Min Max Filters}
-		{GetRandElem {GetPositionsAround2 Position Min Max Filters}}
-	end
-
-	fun{GetManhattanDst P1 P2}
-		pt(x:X1 y:Y1) = P1
-		pt(x:X2 y:Y2) = P2
-	in
-		{Abs X1-X2} + {Abs Y1-Y2}
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% UTIL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{GetRandIndex L}
-		{OS.rand} mod {List.length L} + 1
-	end
-
-	fun{GetRandElem L}
-		if {List.length L} == 0 then null
-		else {List.nth L {GetRandIndex L}} end
-	end
 end
