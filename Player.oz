@@ -7,7 +7,7 @@ import
 		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
 		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
 		getManhattanDst:GetManhattanDst	getDirection:GetDirection) 
-	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
+	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem randomExcept:RandomExcept getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
 		sayItemExplode:SayItemExplode damageSustained:DamageSustained) 
 	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere) 
 export
@@ -22,11 +22,17 @@ define
 	ListMap
 	DamageDstZero = 2 	% if the Manhattan distance, between the submarine and the explosion,  
 	DamageDstOne = 1	% is 0 (resp. 1), the submarine gets 2 damages (resp. 1 damage).
+	Damages = damages(0:DamageDstZero 1:DamageDstOne)
 	MinSecurityDstExplosion = 2 % if the dst between the submarine and explosion  is greater or egal to 2 then no damage 
 	%%% Player %%%
     StartPlayer 
     TreatStream 
 	MergeState
+	GetNewSubsetState
+	IsAboutDrone
+	AskID
+	IsDead
+	BoundId
 in
 	%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}
@@ -46,25 +52,26 @@ in
         {NewPort Stream}
     end
 
-	proc{GetNewSubsetState Args Fun}
+	proc{TreatStream Stream State}
+		case Stream
+		of nil then skip
+		[] Msg|T then NewSubsetState in
+			NewSubsetState = {GetNewSubsetState Msg State}
+			{TreatStream T {MergeState State NewSubsetState}}
+		end
 	end
 
-	proc{TreatStream Stream State}
-		case Stream of nil then skip
-		[] Msg|T then 
-			NewSubsetState
-			FunAnonyme
-			Args = {List.append {Record.toList Msg} [FunAnonyme]}
-			Fun = {Record.label Msg}
-		in
-			if {Value.hasFeature Strategy Fun} then  
-				{Procedure.apply Strategy.Fun Args}
-				NewSubsetState = {FunAnonyme State}
-				{TreatStream T {MergeState State NewSubsetState}}
-			else % Msg don't match with a strategy function.
-				{TreatStream T State}
-			end
-		end
+	fun{GetNewSubsetState Msg State}
+		NewSubsetState
+		FunAnonyme
+		Args = {List.append {Record.toList Msg} [FunAnonyme]}
+		Fun = {Record.label Msg}
+	in
+		{BoundId Args Msg State}
+		if {Value.hasFeature Strategy Fun} then 
+			{Procedure.apply Strategy.Fun Args}
+			{FunAnonyme State}
+		else player() end
 	end
 
 	fun{MergeState State NewSubsetState}
@@ -89,6 +96,29 @@ in
 		{Loop State Arities}
 	end
 
+	fun{IsAboutDrone Msg} Lb = {Record.label Msg} in
+		Lb==sayPassingDrone orelse Lb==sayAnswerDrone
+	end
+
+	fun{AskID Msg} Lb = {Record.label Msg} in
+		Lb==initPosition orelse Lb==move orelse Lb==chargeItem orelse Lb==fireItem orelse Lb==fireMine
+		orelse Lb==sayPassingDrone orelse Lb==sayPassingSonar
+	end
+
+	fun{IsDead Player}
+		Player.dead
+	end
+
+	proc{BoundId Args Msg State}
+		if {IsDead State} andthen {AskID Msg} then
+			if {IsAboutDrone Msg} then Args.2.1 = null
+			else Args.1 = null end
+		elseif {Not {IsDead State}} andthen {AskID Msg} then
+			if {IsAboutDrone Msg} then Args.2.1 = State.id
+			else Args.1 = State.id end
+		end
+	end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Strategy = strategy(
@@ -96,7 +126,6 @@ in
 	initPosition:
 	fun{$ ?ID ?Position}
 		fun{$ Player}
-			ID=Player.id
 			Position = {GetPositionOnMap Map [{IsNotIsland ListMap NColumn}]}
 			player(position:Position path:Position|Player.path)
 		end
@@ -110,9 +139,8 @@ in
 	end
 
 	move:
-	fun{$ ID Position Direction}
+	fun{$ ?ID ?Position ?Direction}
 		fun{$ Player} ValidPositions in
-			ID = Player.id
 			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player.path}] Map}
 			if Position == null then
 				Direction=surface
@@ -127,7 +155,6 @@ in
 	chargeItem:
 	fun{$ ?ID ?KindItem}
 		fun{$ Player} Items Item NewLoad in
-			ID = Player.id
 			Items = {Record.arity Player.load}
 			Item = {GetRandElem Items}
 			NewLoad = Player.load.Item + 1
@@ -141,7 +168,6 @@ in
 	fireItem:
 	fun{$ ?ID ?KindFire}
 		fun{$ Player} ItemsLoaded Item MinePos Mines in
-			ID = Player.id
 			ItemsLoaded = {GetItemsLoaded Player Load}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
@@ -169,7 +195,6 @@ in
 	fireMine:
 	fun{$ ?ID ?Mine}
 		fun{$ Player}
-			ID = Player.id
 			case Player.mines 
 			of H|Mines andthen {OS.rand} mod 4 == 0 then
 				Mine=H
@@ -210,25 +235,25 @@ in
 
 	sayMissileExplode:
 	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
-			player(lifeLeft: NewLifeLeft) 	
+		fun{$ Player}
+			{SayItemExplode Player Position Damages ?Message}
 		end		
 	end
 	
 	sayMineExplode:
 	fun{$ ID Position ?Message}
-		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
-			player(lifeLeft: NewLifeLeft)
+		fun{$ Player}
+			{SayItemExplode Player Position Damages ?Message}
 		end
 	end
 
 	sayPassingDrone:
 	fun{$ Drone ?ID ?Answer}
 		fun{$ Player}
-			ID = Player.id
-			Answer = false
+			case Drone.1
+			of row then Answer = Drone.2 == Player.position.x
+			[] column then Answer = Drone.2 == Player.position.y
+			end
 			player()
 		end
 	end
@@ -241,8 +266,7 @@ in
 	sayPassingSonar:
 	fun{$ ?ID ?Answer}
 		fun{$ Player}
-			ID = Player.id
-			Answer = pt(x: Player.position.x y: 3)
+			Answer = pt(x:Player.position.x y:{RandomExcept 1 NRow Player.position.y})
 			player()
 		end
 	end

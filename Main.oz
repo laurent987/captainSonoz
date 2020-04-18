@@ -96,17 +96,19 @@ define
 	proc {InitPlayer Player}
 		PlayerID Position
 	in
-		{Send Player.port initPosition(PlayerID Position)}
+		{Send Player.port initPosition(?PlayerID ?Position)}
+		{Show waitID}
 		{Wait PlayerID}
+		{Show id#PlayerID}
 		{Wait Position}
 		{Send GUI_port initPlayer(PlayerID Position)}
 	end
 	proc {Broadcast Message PlayerList}
 		case Message
-		of explosion(Msg Id Position) then 
+		of explosion(Msg ID Position) then 
 			{List.forAll PlayerList
 				proc {$ P} Damage in
-					{Send P.port Msg(Id Position ?Damage)}
+					{Send P.port Msg(ID Position ?Damage)}
 					thread
 					case Damage of null then skip
 					[] sayDeath(ID) then 
@@ -134,21 +136,21 @@ define
 		else {List.forAll PlayerList proc {$ P} {Send P.port Message} end}
 		end
 	end
-	fun {Move Player PlayerList} Position Id Direction in
-		{Send Player.port move(?Id ?Position ?Direction)}
+	fun {Move Player PlayerList} Position ID Direction in
+		{Send Player.port move(?ID ?Position ?Direction)}
 		case Direction of surface then
-			{Send GUI_port surface(Id)}
+			{Send GUI_port surface(ID)}
 			surface
 		else
-			{Send GUI_port movePlayer(Id Position)}
-			{Broadcast sayMove(Id Direction) PlayerList}
+			{Send GUI_port movePlayer(ID Position)}
+			{Broadcast sayMove(ID Direction) PlayerList}
 			continue
 		end
 	end
-	proc {ChargeItem Player PLayerList} Id KindItem in
-		{Send Player.port chargeItem(?Id ?KindItem)}
+	proc {ChargeItem Player PLayerList} ID KindItem in
+		{Send Player.port chargeItem(?ID ?KindItem)}
 		if KindItem \= null then
-			{Broadcast sayCharge(Id KindItem) PLayerList}
+			{Broadcast sayCharge(ID KindItem) PLayerList}
 		end
 	end
 	proc {FireItem Player PLayerList} ID KindItem in

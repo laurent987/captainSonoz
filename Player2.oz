@@ -7,7 +7,7 @@ import
 		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
 		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
 		getManhattanDst:GetManhattanDst	getDirection:GetDirection keepDirection:KeepDirection) 
-	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
+	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem randomExcept:RandomExcept getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
 		sayItemExplode:SayItemExplode damageSustained:DamageSustained)
 	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere isNotOnEdge:IsNotOnEdge)
 export
@@ -22,6 +22,7 @@ define
 	ListMap
 	DamageDstZero = 2 	% if the Manhattan distance, between the submarine and the explosion,  
 	DamageDstOne = 1	% is 0 (resp. 1), the submarine gets 2 damages (resp. 1 damage).
+	Damages = damages(0:DamageDstZero 1:DamageDstOne)
 	MinSecurityDstExplosion = 2 % if the dst between the submarine and explosion  is greater or egal to 2 then no damage 
 	%%% Player %%%
     StartPlayer 
@@ -33,13 +34,14 @@ in
         Stream
 		StateInitial=player(
 			id:id(id:Id color:Color name:'Player')
-			position: pt(x:0 y:0)
+			position:pt(x:0 y:0)
 			direction:null
-			path: nil
+			path:nil
+			dead:false
 			lifeLeft: Input.maxDamage  			
 			surface:true		% true if the sub is on the surface
 			mines:nil			% mines=[mine_1(<position),..., mine_n(<position)]
-			load: items(mine:0 missile:0 drone:0  sonar:0)) % number of charge for each item
+			load:items(mine:0 missile:0 drone:0  sonar:0)) % number of charge for each item
     in
 		ListMap = {MapToList Map}
         thread {TreatStream Stream StateInitial} end
@@ -224,24 +226,24 @@ in
 	sayMissileExplode:
 	fun{$ ID Position ?Message}
 		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
-			player(lifeLeft: NewLifeLeft) 	
+			{SayItemExplode Player Position Damages ?Message} 	
 		end		
 	end
 	
 	sayMineExplode:
 	fun{$ ID Position ?Message}
 		fun{$ Player} NewLifeLeft in
-			NewLifeLeft = {SayItemExplode Player Position damages(0:DamageDstZero 1:DamageDstOne) ?Message}
-			player(lifeLeft: NewLifeLeft)
-		end
+			{SayItemExplode Player Position Damages ?Message} 	
+		end		
 	end
 
 	sayPassingDrone:
 	fun{$ Drone ?ID ?Answer}
 		fun{$ Player}
-			ID = Player.id
-			Answer = false
+			case Drone.1
+			of row then Answer = Drone.2 == Player.position.x
+			[] column then Answer = Drone.2 == Player.position.y
+			end
 			player()
 		end
 	end
@@ -256,11 +258,11 @@ in
 	sayPassingSonar:
 	fun{$ ?ID ?Answer}
 		fun{$ Player}
-			ID = Player.id
-			Answer = pt(x: Player.position.x y: 3)
+			Answer = pt(x:{RandomExcept 1 NColumn Player.position.x} y:Player.position.y)
 			player()
 		end
 	end
+
 
 	sayAnswerSonar:
 	fun{$ ID Answer}

@@ -5,6 +5,7 @@ import
 export
 	getRandIndex:GetRandIndex
 	getRandElem:GetRandElem
+	randomExcept:RandomExcept
 	getItemsLoaded:GetItemsLoaded
 	isLoaded:IsLoaded
 	sayItemExplode:SayItemExplode
@@ -12,6 +13,7 @@ export
 define
 	GetRandIndex
 	GetRandElem
+	RandomExcept
 	GetItemsLoaded
 	IsLoaded
 	SayItemExplode
@@ -24,6 +26,12 @@ in
 	fun{GetRandElem L}
 		if {List.length L} == 0 then null
 		else {List.nth L {GetRandIndex L}} end
+	end
+
+	fun{RandomExcept Min Max NumNotAccepted}
+		L = {List.subtract {List.number Min Max 1} NumNotAccepted}
+	in
+		{GetRandElem L}
 	end
 
 	fun{GetItemsLoaded Player Load}
@@ -40,13 +48,16 @@ in
 		Player.load.Item >= Load.Item
 	end
 
-	fun{SayItemExplode Player Position Damages ?Message} Damage NewLifeLeft in
+	fun{SayItemExplode Player Position Damages ?Message} Damage NewLifeLeft Dead in
 		Damage={DamageSustained Damages Player Position} 
 		NewLifeLeft = Player.lifeLeft - Damage
-		if NewLifeLeft =< 0 then Message = sayDeath(Player.id)
+		if NewLifeLeft =< 0 then
+			Message = sayDeath(Player.id)
+			Dead=true
 		elseif Damage == 0 then	Message = null
 		else Message = sayDamageTaken(Player.id Damage NewLifeLeft) end
-		NewLifeLeft 			
+		if {Not {IsDet Dead}} then Dead=false end
+		player(lifeLeft:NewLifeLeft dead:Dead)			
 	end
 
 	fun{DamageSustained Damages Player PositionExplosion}
