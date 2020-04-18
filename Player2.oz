@@ -28,6 +28,11 @@ define
     StartPlayer 
     TreatStream 
 	MergeState
+	GetNewSubsetState
+	IsAboutDrone
+	AskID
+	IsDead
+	BoundId
 in
 	%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF PLAYER'S PORT AND LECTURE OF STREAM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fun{StartPlayer Color Id}
@@ -48,22 +53,26 @@ in
         {NewPort Stream}
     end
 
-	proc{TreatStream Stream State}
-		case Stream of nil then skip
-		[] Msg|T then 
-			NewSubsetState
-			FunAnonyme
-			Args = {List.append {Record.toList Msg} [FunAnonyme]}
-			Fun = {Record.label Msg}
-		in
-			if {Value.hasFeature Strategy Fun} then  
-				{Procedure.apply Strategy.Fun Args}
-				NewSubsetState = {FunAnonyme State}
-				{TreatStream T {MergeState State NewSubsetState}}
-			else % Msg don't match with a strategy function.
-				{TreatStream T State}
-			end
+proc{TreatStream Stream State}
+		case Stream
+		of nil then skip
+		[] Msg|T then NewSubsetState in
+			NewSubsetState = {GetNewSubsetState Msg State}
+			{TreatStream T {MergeState State NewSubsetState}}
 		end
+	end
+
+	fun{GetNewSubsetState Msg State}
+		NewSubsetState
+		FunAnonyme
+		Args = {List.append {Record.toList Msg} [FunAnonyme]}
+		Fun = {Record.label Msg}
+	in
+		{BoundId Args Msg State}
+		if {Value.hasFeature Strategy Fun} then 
+			{Procedure.apply Strategy.Fun Args}
+			{FunAnonyme State}
+		else player() end
 	end
 
 	fun{MergeState State NewSubsetState}
@@ -88,6 +97,29 @@ in
 		{Loop State Arities}
 	end
 
+	fun{IsAboutDrone Msg} Lb = {Record.label Msg} in
+		Lb==sayPassingDrone orelse Lb==sayAnswerDrone
+	end
+
+	fun{AskID Msg} Lb = {Record.label Msg} in
+		Lb==initPosition orelse Lb==move orelse Lb==chargeItem orelse Lb==fireItem orelse Lb==fireMine
+		orelse Lb==sayPassingDrone orelse Lb==sayPassingSonar
+	end
+
+	fun{IsDead Player}
+		Player.dead
+	end
+
+	proc{BoundId Args Msg State}
+		if {IsDead State} andthen {AskID Msg} then
+			if {IsAboutDrone Msg} then Args.2.1 = null
+			else Args.1 = null end
+		elseif {Not {IsDead State}} andthen {AskID Msg} then
+			if {IsAboutDrone Msg} then Args.2.1 = State.id
+			else Args.1 = State.id end
+		end
+	end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Strategy = strategy(
@@ -95,7 +127,6 @@ in
     initPosition:
     fun{$ ?ID ?Position}
 		fun{$ Player}
-			ID=Player.id
 			Position = {GetPositionOnMap Map [{IsNotIsland ListMap NColumn} {IsNotOnEdge Map}]}
 			player(position:Position path:Position|Player.path)
 		end
@@ -111,7 +142,6 @@ in
 	move:
 	fun{$ ID Position Direction}
 		fun{$ Player} ValidPositions PosTmp in
-			ID = Player.id
 			PosTmp = {KeepDirection Player Map}
 			if PosTmp \= null then
 				Position = PosTmp
@@ -131,7 +161,6 @@ in
 	chargeItem:
 	fun{$ ?ID ?KindItem}
 		fun{$ Player} Items Item NewLoad in
-			ID = Player.id
 			Item = mine
 			NewLoad = Player.load.Item + 1
 			if NewLoad mod Input.Item == 0 then KindItem = Item
@@ -144,7 +173,6 @@ in
 	fireItem:
 	fun{$ ?ID ?KindFire}
 		fun{$ Player} ItemsLoaded Item MinePos Mines in
-			ID = Player.id
 			ItemsLoaded = {GetItemsLoaded Player Load}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
@@ -171,7 +199,6 @@ in
 	fireMine:
 	fun{$ ?ID ?Mine}
 		fun{$ Player}
-			ID = Player.id
 			case Player.mines 
 			of H|Mines 
 					andthen {OS.rand} mod 4 == 0 
