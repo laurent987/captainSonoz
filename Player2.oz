@@ -123,7 +123,6 @@ in
 				player(surface:true path: Player.position|nil)
 			else 
 				Direction = {GetDirection Player.position Position}
-				{Show direction#Direction}
 				player(position:Position direction:Direction path:Position|Player.path)
 			end
 		end
@@ -149,7 +148,6 @@ in
 			ItemsLoaded = {GetItemsLoaded Player Load}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
-				{Show item#Item#loaded#preparationToFire}
 				case Item
 				of mine then
 					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil Map}

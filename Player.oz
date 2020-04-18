@@ -171,7 +171,6 @@ in
 			ItemsLoaded = {GetItemsLoaded Player Load}
 			if {List.length ItemsLoaded} > 0 then
 				Item = {GetRandElem ItemsLoaded}
-				{Show item#Item#loaded#preparationToFire}
 				case Item
 				of mine then
 					MinePos = {GetPositionAround2 Player.position Input.minDistanceMine Input.maxDistanceMine nil Map}

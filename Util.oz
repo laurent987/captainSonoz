@@ -49,14 +49,19 @@ in
 	end
 
 	fun{SayItemExplode Player Position Damages ?Message} Damage NewLifeLeft Dead in
-		Damage={DamageSustained Damages Player Position} 
-		NewLifeLeft = Player.lifeLeft - Damage
-		if NewLifeLeft =< 0 then
-			Message = sayDeath(Player.id)
+		if Player.dead then 
+			Message=null
 			Dead=true
-		elseif Damage == 0 then	Message = null
-		else Message = sayDamageTaken(Player.id Damage NewLifeLeft) end
-		if {Not {IsDet Dead}} then Dead=false end
+		else 
+			Damage={DamageSustained Damages Player Position} 
+			NewLifeLeft = Player.lifeLeft - Damage
+			if NewLifeLeft =< 0 then
+				Message = sayDeath(Player.id)
+				Dead=true
+			elseif Damage == 0 then	Message = null
+			else Message = sayDamageTaken(Player.id Damage NewLifeLeft) end
+			if {Not {IsDet Dead}} then Dead=false end
+		end
 		player(lifeLeft:NewLifeLeft dead:Dead)			
 	end
 

@@ -125,11 +125,12 @@ define
 			{List.forAll PlayerList
 				proc {$ P}
 					thread ID Answer Args ArgsTupled in
-						Args = {List.append {Record.toList QueryMsg} [ID Answer]}
+						Args = {List.append {Record.toList QueryMsg} [?ID ?Answer]}
 						ArgsTupled = {List.mapInd Args fun {$ I A} I#A end}
 						{Send P.port {List.toRecord {Record.label QueryMsg} ArgsTupled}}
-						{Wait Answer}
-						{Send Player.port {List.toRecord {Record.label AnswerMsg} ArgsTupled}}
+						if ID \= null then
+							{Send Player.port {List.toRecord {Record.label AnswerMsg} ArgsTupled}}
+						end
 					end
 				end
 			}		
@@ -138,24 +139,26 @@ define
 	end
 	fun {Move Player PlayerList} Position ID Direction in
 		{Send Player.port move(?ID ?Position ?Direction)}
-		case Direction of surface then
-			{Send GUI_port surface(ID)}
-			surface
-		else
-			{Send GUI_port movePlayer(ID Position)}
-			{Broadcast sayMove(ID Direction) PlayerList}
-			continue
+		if ID\=null then
+			case Direction of surface then
+				{Send GUI_port surface(ID)}
+				surface
+			else
+				{Send GUI_port movePlayer(ID Position)}
+				{Broadcast sayMove(ID Direction) PlayerList}
+				continue
+			end
 		end
 	end
 	proc {ChargeItem Player PLayerList} ID KindItem in
 		{Send Player.port chargeItem(?ID ?KindItem)}
-		if KindItem \= null then
+		if KindItem\=null then
 			{Broadcast sayCharge(ID KindItem) PLayerList}
 		end
 	end
 	proc {FireItem Player PLayerList} ID KindItem in
 		{Send Player.port fireItem(?ID ?KindItem)}
-		if KindItem \= null then
+		if ID\=null andthen KindItem\=null then
 			case KindItem
 			of mine(Position) then 
 				{Broadcast sayMinePlaced(ID) PLayerList}
@@ -168,7 +171,7 @@ define
 	end
 	proc {FireMine Player PlayerList} ID Position in
 		{Send Player.port fireMine(?ID ?Position)}
-		if Position \= null then 
+		if ID\=null andthen Position\=null then 
 			{Send GUI_port removeMine(ID Position)}
 			{Broadcast explosion(sayMineExplode ID Position) PlayerList}
 		end
