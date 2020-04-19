@@ -1,6 +1,7 @@
 functor
 import
 	QTk at 'x-oz://system/wp/QTk.ozf'
+	System(show:Show)
 	Input
 export
 	portWindow:StartWindow
@@ -175,7 +176,7 @@ in
 	fun{DrawPath Grid Color X Y}
 		Handle LabelPath
 	in
-		LabelPath = label(text:"" handle:Handle bg:Color)
+		LabelPath = label(text:"ttt" handle:Handle bg:Color)
 		{Grid.grid configure(LabelPath row:X+1 column:Y+1)}
 		Handle
 	end
@@ -221,7 +222,7 @@ in
 	fun{RemovePlayer Grid WantedID State}
 		case State
 		of nil then nil
-		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then
+		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then	
 			if (ID == WantedID) then
 				{HandleScore set(0)}
 				for H in P do
