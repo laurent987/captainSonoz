@@ -42,6 +42,9 @@ out/Util.ozf:
 clean:
 	rm -f out/*.ozf
 
+clean_in:
+	rm -f out/Input.ozf
+
 clean_player:
 	rm out/Player.ozf
 

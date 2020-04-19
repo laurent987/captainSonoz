@@ -3,6 +3,7 @@ import
 	Filters(applyFilters:ApplyFilters filterGeneric:FilterGeneric isInsideMap:IsInsideMap
 			isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere)
 	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem)
+	System(show:Show)
 export
 	mapToList: MapToList
 	generateMapPosition: GenerateMapPosition
@@ -85,7 +86,7 @@ in
 	end
 
 	fun{GetPositionsAround Position Min Max Filters} S in
-		S = thread {GenerateManhattanPositions Position Min Max} end
+		S = {GenerateManhattanPositions Position Min Max}
 		{ApplyFilters Filters S}
 	end
 

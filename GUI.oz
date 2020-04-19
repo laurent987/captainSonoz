@@ -252,7 +252,6 @@ in
 	end
 
 	proc{TreatStream Stream Grid State}
-		{Show guiTreatStream}
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in 
@@ -262,7 +261,6 @@ in
 			NewState = {DrawSubmarine Grid ID Position}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then
-			{Show guiMove#Position}
 			{TreatStream T Grid {StateModification Grid ID State {MoveSubmarine Position}}}
 		[] lifeUpdate(ID Life)|T then
 			{TreatStream T Grid {StateModification Grid ID State {UpdateLife Life}}}

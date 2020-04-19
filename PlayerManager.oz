@@ -12,6 +12,7 @@ in
 		case Kind
 		of player089dummy then {Player089Dummy.portPlayer Color ID}
 		[] player089smart then {Player089Smart.portPlayer Color ID}
+		[] player089human then {PlayerHuman.portPlayer Color ID}
 		end
 	end
 end
