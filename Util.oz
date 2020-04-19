@@ -46,7 +46,6 @@ in
 		{Loop Player {Record.arity Player.load}}
 	end
 
-
 	fun{GetItemsCreated Player Load}
 		fun{Loop Player Items}
 			case Items of nil then nil
