@@ -7,8 +7,8 @@ export
 	getRandElem:GetRandElem
 	randomExcept:RandomExcept
 	getItemsNoCreated:GetItemsNoCreated
-	getItemsLoaded:GetItemsLoaded
-	isLoaded:IsLoaded
+	getItemsCreated:GetItemsCreated
+	isCreated:IsCreated
 	sayItemExplode:SayItemExplode
 	damageSustained:DamageSustained	
 define
@@ -16,8 +16,8 @@ define
 	GetRandElem
 	RandomExcept
 	GetItemsNoCreated
-	GetItemsLoaded
-	IsLoaded
+	GetItemsCreated
+	IsCreated
 	SayItemExplode
 	DamageSustained
 in
@@ -39,7 +39,7 @@ in
 	fun{GetItemsNoCreated Player Load}
 		fun{Loop Player Items}
 			case Items of nil then nil
-			[] Item|T andthen {Not {IsLoaded Player Item Load}} then Item|{Loop Player T}
+			[] Item|T andthen {Not {IsCreated Player Item Load}} then Item|{Loop Player T}
 			[] _|T then {Loop Player T} end		
 		end
 	in
@@ -47,17 +47,17 @@ in
 	end
 
 
-	fun{GetItemsLoaded Player Load}
+	fun{GetItemsCreated Player Load}
 		fun{Loop Player Items}
 			case Items of nil then nil
-			[] Item|T andthen {IsLoaded Player Item Load} then Item|{Loop Player T}
+			[] Item|T andthen {IsCreated Player Item Load} then Item|{Loop Player T}
 			[] _|T then {Loop Player T} end		
 		end
 	in
 		{Loop Player {Record.arity Player.load}}
 	end
 
-	fun{IsLoaded Player Item Load}
+	fun{IsCreated Player Item Load}
 		Player.load.Item >= Load.Item
 	end
 

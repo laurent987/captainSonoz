@@ -27,8 +27,8 @@ define
 	Label
 	%%% Util functions for Strategy functions %%%
 	GetDirection
-	GetItemsLoaded
-	IsLoaded
+	GetItemsCreated
+	IsCreated
 	SayItemExplode
 	DamageSustained
 	%%% Position Management %%%
@@ -225,7 +225,7 @@ in
 	fireItem:
 	fun{$ ?ID ?KindFire Player} ItemsLoaded Item MinePos Mines in
 		ID = Player.id
-		ItemsLoaded = {GetItemsLoaded Player}
+		ItemsLoaded = {GetItemsCreated Player}
 		if {List.length ItemsLoaded} > 0 then
 			Item = {GetRandElem ItemsLoaded}
 			{Show item#Item#loaded#preparationToFire}
@@ -335,17 +335,17 @@ in
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Util function for Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	fun{GetItemsLoaded Player}
+	fun{GetItemsCreated Player}
 		fun{Loop Player Items}
 			case Items of nil then nil
-			[] Item|T andthen {IsLoaded Player Item} then Item|{Loop Player T}
+			[] Item|T andthen {IsCreated Player Item} then Item|{Loop Player T}
 			[] _|T then {Loop Player T} end		
 		end
 	in
 		{Loop Player {Record.arity Player.load}}
 	end
 
-	fun{IsLoaded Player Item}
+	fun{IsCreated Player Item}
 		Player.load.Item >= Input.Item
 	end
 
