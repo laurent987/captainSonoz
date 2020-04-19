@@ -1,6 +1,7 @@
 functor
 import
 	QTk at 'x-oz://system/wp/QTk.ozf'
+	System(show:Show)
 	Input
 export
 	portWindow:StartWindow
@@ -164,7 +165,7 @@ in
 		fun{RemoveMine Position}
 			fun{$ Grid State}
 				ID HandleScore Handle Mine Path NewMine
-			in
+				in
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
 				NewMine = {RmMine Grid Position Mine}
 				guiPlayer(id:ID score:HandleScore submarine:Handle mines:NewMine path:Path)
@@ -175,7 +176,7 @@ in
 	fun{DrawPath Grid Color X Y}
 		Handle LabelPath
 	in
-		LabelPath = label(text:"**" handle:Handle bg:Color)
+		LabelPath = label(text:"ttt" handle:Handle bg:Color)
 		{Grid.grid configure(LabelPath row:X+1 column:Y+1)}
 		Handle
 	end
@@ -221,7 +222,7 @@ in
 	fun{RemovePlayer Grid WantedID State}
 		case State
 		of nil then nil
-		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then
+		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then	
 			if (ID == WantedID) then
 				{HandleScore set(0)}
 				for H in P do
@@ -252,7 +253,6 @@ in
 	end
 
 	proc{TreatStream Stream Grid State}
-		{Show guiTreatStream}
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in 
@@ -262,10 +262,10 @@ in
 			NewState = {DrawSubmarine Grid ID Position}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then
-			{Show guiMove#Position}
 			{TreatStream T Grid {StateModification Grid ID State {MoveSubmarine Position}}}
 		[] lifeUpdate(ID Life)|T then
 			{TreatStream T Grid {StateModification Grid ID State {UpdateLife Life}}}
+			{TreatStream T Grid State}
 		[] putMine(ID Position)|T then 
 			{TreatStream T Grid {StateModification Grid ID State {DrawMine Position}}}
 		[] removeMine(ID Position)|T then

@@ -5,43 +5,51 @@ import
     PlayerManager
 	System(show:Show)
 	OS
+	Application(exit:Exit)
 define
 	PlayerList
 	GUI_port
-	X
 	proc {SimultateThinking}
 		{Delay Input.thinkMin + {OS.rand} mod (Input.thinkMax - Input.thinkMin)}
 	end
 	proc {NewGameTurnBased PlayerList}
-		proc {LoopGame PlayerList} 
+		proc {LoopGame PlayerList}
 			if {Length PlayerList} > 1 then
 				{LoopGame {RoundTable PlayerList PlayerList}}
 			else
-				{Show 'the end'#PlayerList}
+				{Show 'The end! The winner is the player'#PlayerList.1.color}
+				{Exit 0}
 			end
 		end
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
 		% PL is the List of All the players alive
 		fun {RoundTable PlayersLeft PL}
 			case PlayersLeft of nil then nil
-			[] P|Pr andthen {Send P.port isDead($)} then {RoundTable Pr PL}
+			[] P|Pr andthen {Send P.port isDead($)} then
+				{RoundTable Pr PL}
 			[] P|Pr andthen X in (X=P.turnToWait)>0 then
-				{Record.adjoin P player(turnToWait: X-1)}|{RoundTable Pr PL}
-			[] P|Pr then {PlayTurn P PL}|{RoundTable Pr PL}
+				{Record.adjoin P player(turnToWait:X-1)}|{RoundTable Pr PL}
+			[] P|Pr then 
+				{PlayTurn P PL}|{RoundTable Pr PL}
 			end
 		end
-		fun {PlayTurn Player PlayerList} Dir in
+		fun {PlayTurn Player PlayerList} Dir NewStatePlayer in
+			{Show 'Turn of player'#Player.color}
 			{Delay Input.guiDelay}
-			if Player.surface then {Send Player.port dive} end
+			if Player.surface then  
+				{Send Player.port dive}
+				NewStatePlayer = {Record.adjoin Player player(surface:false)}
+			end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
-				{Record.adjoin Player player(turnToWait: Input.turnSurface surface:true)}
-			else
+				NewStatePlayer = {Record.adjoin Player player(turnToWait:Input.turnSurface surface:true)}
+			elseif Dir==continue then
 				{ChargeItem Player PlayerList}
 				{FireItem Player PlayerList}
 				{FireMine Player PlayerList}
-				Player
+				if {Not {IsDet NewStatePlayer}} then NewStatePlayer = Player end
 			end
+			NewStatePlayer
 		end
 	in
 		{LoopGame PlayerList}
@@ -81,10 +89,13 @@ define
                     if (Input.isTurnByTurn) then 
                         player( port:{PlayerManager.playerGenerator H1 H2 IdNum}
 								id: IdNum
+								color: H2
 								surface:true
                                 turnToWait:0)|{Loop T1 T2 IdNum+1}
                     else
                         player(	port:{PlayerManager.playerGenerator H1 H2 IdNum}
+								id: IdNum
+								color: H2
 								surface:true)|{Loop T1 T2 IdNum+1} 
                     end
                 end
@@ -96,17 +107,17 @@ define
 	proc {InitPlayer Player}
 		PlayerID Position
 	in
-		{Send Player.port initPosition(PlayerID Position)}
+		{Send Player.port initPosition(?PlayerID ?Position)}
 		{Wait PlayerID}
 		{Wait Position}
 		{Send GUI_port initPlayer(PlayerID Position)}
 	end
 	proc {Broadcast Message PlayerList}
 		case Message
-		of explosion(Msg Id Position) then 
+		of explosion(Msg ID Position) then 
 			{List.forAll PlayerList
 				proc {$ P} Damage in
-					{Send P.port Msg(Id Position ?Damage)}
+					{Send P.port Msg(ID Position ?Damage)}
 					thread
 					case Damage of null then skip
 					[] sayDeath(ID) then 
@@ -123,38 +134,40 @@ define
 			{List.forAll PlayerList
 				proc {$ P}
 					thread ID Answer Args ArgsTupled in
-						Args = {List.append {Record.toList QueryMsg} [ID Answer]}
+						Args = {List.append {Record.toList QueryMsg} [?ID ?Answer]}
 						ArgsTupled = {List.mapInd Args fun {$ I A} I#A end}
 						{Send P.port {List.toRecord {Record.label QueryMsg} ArgsTupled}}
-						{Wait Answer}
-						{Send Player.port {List.toRecord {Record.label AnswerMsg} ArgsTupled}}
+						if ID \= null then
+							{Send Player.port {List.toRecord {Record.label AnswerMsg} ArgsTupled}}
+						end
 					end
 				end
 			}		
 		else {List.forAll PlayerList proc {$ P} {Send P.port Message} end}
 		end
 	end
-	fun {Move Player PlayerList} Position Id Direction in
-		{Send Player.port move(?Id ?Position ?Direction)}
-		case Direction of surface then
-			{Send GUI_port surface(Id)}
-			surface
-		else
-			{Show mainMove#Position}
-			{Send GUI_port movePlayer(Id Position)}
-			{Broadcast sayMove(Id Direction) PlayerList}
-			continue
-		end
+	fun {Move Player PlayerList} Position ID Direction in
+		{Send Player.port move(?ID ?Position ?Direction)}
+		if ID\=null then
+			case Direction of surface then
+				{Send GUI_port surface(ID)}
+				surface
+			else
+				{Send GUI_port movePlayer(ID Position)}
+				{Broadcast sayMove(ID Direction) PlayerList}
+				continue
+			end
+		else dead end
 	end
-	proc {ChargeItem Player PLayerList} Id KindItem in
-		{Send Player.port chargeItem(?Id ?KindItem)}
-		if KindItem \= null then
-			{Broadcast sayCharge(Id KindItem) PLayerList}
+	proc {ChargeItem Player PLayerList} ID KindItem in
+		{Send Player.port chargeItem(?ID ?KindItem)}
+		if KindItem\=null then
+			{Broadcast sayCharge(ID KindItem) PLayerList}
 		end
 	end
 	proc {FireItem Player PLayerList} ID KindItem in
 		{Send Player.port fireItem(?ID ?KindItem)}
-		if KindItem \= null then
+		if ID\=null andthen KindItem\=null then
 			case KindItem
 			of mine(Position) then 
 				{Broadcast sayMinePlaced(ID) PLayerList}
@@ -167,18 +180,17 @@ define
 	end
 	proc {FireMine Player PlayerList} ID Position in
 		{Send Player.port fireMine(?ID ?Position)}
-		if Position \= null then 
+		if ID\=null andthen Position\=null then 
 			{Send GUI_port removeMine(ID Position)}
 			{Broadcast explosion(sayMineExplode ID Position) PlayerList}
 		end
 	end
 in
     GUI_port = {GUI.portWindow}
-    {Send GUI_port buildWindow(X)}
+    {Send GUI_port buildWindow}
 
     PlayerList = {GeneratePlayers} 
     {List.forAll PlayerList InitPlayer}
-	{Wait X} % Wait Interface is build
     if (Input.isTurnByTurn) then 
         {NewGameTurnBased PlayerList}
     else

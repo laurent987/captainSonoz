@@ -1,2 +1,3 @@
 *.ozf
 tmp.oz
+.DS_Store

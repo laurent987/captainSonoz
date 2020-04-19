@@ -4,6 +4,13 @@ import
     Input
 	OS
 	System(show:Show)
+	PositionManager(mapToList:MapToList generateMapPosition:GenerateMapPosition generateManhattanPositions:GenerateManhattanPositions
+		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
+		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
+		getManhattanDst:GetManhattanDst	getDirection:GetDirection) 
+	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem randomExcept:RandomExcept getItemsNoCreated:GetItemsNoCreated getItemsCreated:GetItemsCreated isCreated:IsCreated
+		sayItemExplode:SayItemExplode damageSustained:DamageSustained) 
+	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere) 
 export
     portPlayer:StartPlayer
 define
@@ -46,8 +53,8 @@ define
 	MapGUI
 	%%% Util functions for Strategy functions %%%
 	GetDirection
-	GetItemsLoaded
-	IsLoaded
+	GetItemsCreated
+	IsCreated
 	SayItemExplode
 	DamageSustained
 	%%% Position Management %%%
@@ -627,178 +634,4 @@ in
 		end
 	end)
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Util function for Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{GetItemsLoaded Player}
-		fun{Loop Player Items}
-			case Items of nil then nil
-			[] Item|T andthen {IsLoaded Player Item} then Item|{Loop Player T}
-			[] _|T then {Loop Player T} end		
-		end
-	in
-		{Loop Player {Record.arity Player.load}}
-	end
-
-	fun{IsLoaded Player Item}
-		Player.load.Item >= Input.Item
-	end
-
-	fun{GetDirection CurrentPosition NextPosition}
-		pt(x:Cx y:Cy) = CurrentPosition
-		pt(x:Nx y:Ny) = NextPosition
-	in
-		case (Nx-Cx)#(Ny-Cy)
-		of 0#~1 then west
-		[] ~1#0 then north
-		[] 0#1 then east
-		else south end
-	end
-
-	fun{SayItemExplode Player Position ?Message} Damage NewLifeLeft in
-		Damage = {DamageSustained Player Position}
-		NewLifeLeft = Player.lifeLeft - Damage
-		if NewLifeLeft =< 0 then Message = sayDeath(Player.id)
-		elseif Damage == 0 then	Message = null
-		else Message = sayDamageTaken(Player.id Damage NewLifeLeft) end
-		NewLifeLeft 			
-	end
-
-	fun{DamageSustained Player PositionExplosion}
-		case {GetManhattanDst Player.position PositionExplosion}
-		of 0 then DamageDstZero
-		[] 1 then DamageDstOne
-		else 0 end
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% FILTERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	
-	fun{ApplyFilters Filters Ys}
-		thread
-			case Filters of nil then Ys
-			[] Filter|Fs then Zs in
-				Zs = {FilterGeneric Ys Filter}
-				{ApplyFilters Fs Zs}
-			end 
-		end
-	end
-
-	fun{FilterGeneric Ys F}
-		case Ys of nil then nil
-		[] H|T andthen {F H} then H|{FilterGeneric T F}
-		[] _|T then {FilterGeneric T F} end
-	end 
-
-	fun{IsInsideMap Position}
-		pt(x:X y:Y) = Position
-	in
-		0 < X andthen X =< NRow andthen 0 < Y andthen Y =< NColumn
-	end
-
-	fun{IsNotIsland Position}
-		pt(x:X y:Y) = Position
-	in
-		{List.nth ListMap (X-1)*NColumn + Y} == 0
-	end
-
-	fun{IsNotAlreadyGoThere Player}
-		fun{$ Position}
-			fun{Loop Path Position}
-				case Path of nil then true
-				[] H|T andthen H\=Position then {Loop T Position}
-				else false end
-			end
-		in
-			{Loop Player.path Position}
-		end			
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Position Management %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{MapToList Map}
-		fun{GetRow Row X}
-			case Row of nil then X
-			[] H|T then H|{GetRow T X}
-			end
-		end
-		proc{Loop Rows R}
-			case Rows of nil then R=nil
-			[] List|End then X in 
-				R = {GetRow List X}
-				{Loop End X}
-			end
-		end
-	in
-		{Loop Map $}
-	end
-
-	fun{GenerateMapPosition Row Col}
-		fun{Loop I J}
-			if I == Row+1 then nil
-			elseif J == Col+1 then {Loop I+1 1}
-			else pt(x:I y:J)|{Loop I J+1} end  
-		end
-	in
-		{Loop 1 1}
-	end
-
-	fun{GetPositionsOnMap Filters} S in
-		S = thread {GenerateMapPosition NRow NColumn} end
-		{ApplyFilters Filters S}
-	end
-
-	fun{GetPositionOnMap Filters}
-		{GetRandElem {GetPositionsOnMap Filters}}
-	end
-
-	fun{GenerateManhattanPositions Position Min Max}
-		pt(x:X y:Y) = Position
-		fun{Loop Min Max I J} NextPos=pt(x:X+I y:Y+J) in
-			if I == Max+1 then nil
-			elseif J == Max+1 then {Loop Min Max I+1 ~Max}
-			elseif {Abs I}+{Abs J} =< Max andthen {Abs I}+{Abs J} >= Min then
-				NextPos|{Loop Min Max I J+1}
-			else {Loop Min Max I J+1} end
-		end
-	in
-		{Loop Min Max ~Max ~Max}
-	end
-
-	fun{GetPositionsAround Position Min Max Filters} S in
-		S = thread {GenerateManhattanPositions Position Min Max} end
-		{Show streamAround#S}
-		{ApplyFilters Filters S}
-	end
-
-	fun{GetPositionAround Position Min Max Filters}
-		{GetRandElem {GetPositionsAround Position Min Max Filters}}
-	end
-
-	fun{GetPositionsAround2 Position Min Max Filters}
-		NewFilters = IsInsideMap|IsNotIsland|Filters
-	in
-		{GetPositionsAround Position Min Max NewFilters}
-	end
-
-	fun{GetPositionAround2 Position Min Max Filters}
-		{GetRandElem {GetPositionsAround2 Position Min Max Filters}}
-	end
-
-	fun{GetManhattanDst P1 P2}
-		pt(x:X1 y:Y1) = P1
-		pt(x:X2 y:Y2) = P2
-	in
-		{Abs X1-X2} + {Abs Y1-Y2}
-	end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% UTIL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	fun{GetRandIndex L}
-		{OS.rand} mod {List.length L} + 1
-	end
-
-	fun{GetRandElem L}
-		if {List.length L} == 0 then null
-		else {List.nth L {GetRandIndex L}} end
-	end
 end
