@@ -255,9 +255,8 @@ in
 	proc{TreatStream Stream Grid State}
 		case Stream
 		of nil then skip
-		[] buildWindow(X)|T then NewGrid in 
+		[] buildWindow|T then NewGrid in 
 			NewGrid = {BuildWindow}
-			X=unit
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			NewState = {DrawSubmarine Grid ID Position}

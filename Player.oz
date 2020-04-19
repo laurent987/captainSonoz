@@ -7,7 +7,7 @@ import
 		getPositionsOnMap:GetPositionsOnMap	getPositionOnMap:GetPositionOnMap getPositionAround:GetPositionAround
 		getPositionsAround:GetPositionsAround getPositionAround2:GetPositionAround2	getPositionsAround2:GetPositionsAround2
 		getManhattanDst:GetManhattanDst	getDirection:GetDirection) 
-	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem randomExcept:RandomExcept getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
+	Util(getRandIndex:GetRandIndex getRandElem:GetRandElem randomExcept:RandomExcept getItemsNoCreated:GetItemsNoCreated getItemsLoaded:GetItemsLoaded isLoaded:IsLoaded
 		sayItemExplode:SayItemExplode damageSustained:DamageSustained) 
 	Filters(isInsideMap:IsInsideMap isNotIsland:IsNotIsland isNotAlreadyGoThere:IsNotAlreadyGoThere) 
 export
@@ -68,7 +68,8 @@ in
 		Fun = {Record.label Msg}
 	in
 		{BoundId Args Msg State}
-		if {Value.hasFeature Strategy Fun} andthen {Not {IsDead State}} then 
+		if {Value.hasFeature Strategy Fun} 
+			andthen ({Not {IsDead State}} orelse {Record.label Msg} == isDead) then 
 			{Procedure.apply Strategy.Fun Args}
 			{FunAnonyme State}
 		else player() end
@@ -79,18 +80,15 @@ in
 		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen (
-					{Atom.is NewSubsetState.H}
-					orelse {Bool.is NewSubsetState.H}  
-					orelse {List.is NewSubsetState.H}
-					orelse {Not {Record.is NewSubsetState.H}}) then
-				{Loop {Record.adjoin
-						State
-						Label(H:NewSubsetState.H)} T}
-			[] H|T then
+			[] H|T andthen {Not {List.is NewSubsetState.H}}
+					andthen {Record.is NewSubsetState.H} then
 				{Loop {Record.adjoin
 						State
 						Label(H:{MergeState State.H NewSubsetState.H})} T}
+			[] H|T then
+				{Loop {Record.adjoin
+						State
+						Label(H:NewSubsetState.H)} T}
 			end
 		end
 	in
@@ -135,6 +133,7 @@ in
 	dive:
 	fun{$}
 		fun{$ Player}
+			{Show '|_______'#Player.id.color#dive}
 			player(surface:false)
 		end
 	end
@@ -144,25 +143,35 @@ in
 		fun{$ Player} ValidPositions in
 			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player.path}] Map}
 			if Position == null then
+				{Show '|_______'#Player.id.color#makeSurface}
 				Direction=surface
-				player(surface:true path: Player.position|nil)
+				player(surface:true path:Player.position|nil)
 			else 
 				Direction = {GetDirection Player.position Position}
-				player(position: Position path: Position|Player.path)
+				{Show '|_______'#Player.id.color#goTo#Direction#'in'#Position}
+				player(position:Position path:Position|Player.path)
 			end
 		end
 	end
 	
 	chargeItem:
 	fun{$ ?ID ?KindItem}
-		fun{$ Player} Items Item NewLoad in
+		fun{$ Player} Items Item NewLoad ItemsNoCreated in
 			Items = {Record.arity Player.load}
-			Item = {GetRandElem Items}
-			NewLoad = Player.load.Item + 1
-			if NewLoad mod Input.Item == 0 then KindItem = Item
-			else KindItem = null end
-			{Show Player.id.color#chargeItem#Item#NewLoad}
-			player(load: items(Item:NewLoad))
+			ItemsNoCreated = {GetItemsNoCreated Player Load}
+			Item = {GetRandElem ItemsNoCreated}
+			if Item \= null then
+				NewLoad = Player.load.Item + 1
+				{Show '|_______'#Player.id.color#chargeItem#Item#NewLoad}
+				if NewLoad == Input.Item then 
+					{Show '|_______'#Player.id.color#createdItem#Item#NewLoad}
+					KindItem = Item
+				else KindItem = null end
+				player(load:items(Item:NewLoad))
+			else 
+				KindItem = null
+				player()
+			end
 		end
 	end
 
@@ -180,7 +189,7 @@ in
 				[] drone then KindFire = drone(row 3)
 				[] sonar then KindFire = sonar
 				end
-				{Show Player.id.color#fireItem#Item}
+				{Show '|_______'#Player.id.color#fireItem#Item}
 				if {IsDet MinePos} then Mines = MinePos|Player.mines
 				else Mines = Player.mines end
 
@@ -198,7 +207,7 @@ in
 			case Player.mines 
 			of H|Mines andthen {OS.rand} mod 4 == 0 then
 				Mine=H
-				{Show Player.id.color#fireMine#H}
+				{Show '|_______'#Player.id.color#fireMine#H}
 				player(mines:Mines)
 			else Mine=null player()
 			end

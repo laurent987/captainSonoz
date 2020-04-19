@@ -98,6 +98,6 @@ in
 
 %%%% Waiting time for the GUI between each effect %%%%
 
-   GUIDelay = 200 % ms
+   GUIDelay = 50 % ms
 
 end

@@ -6,6 +6,7 @@ export
 	getRandIndex:GetRandIndex
 	getRandElem:GetRandElem
 	randomExcept:RandomExcept
+	getItemsNoCreated:GetItemsNoCreated
 	getItemsLoaded:GetItemsLoaded
 	isLoaded:IsLoaded
 	sayItemExplode:SayItemExplode
@@ -14,6 +15,7 @@ define
 	GetRandIndex
 	GetRandElem
 	RandomExcept
+	GetItemsNoCreated
 	GetItemsLoaded
 	IsLoaded
 	SayItemExplode
@@ -33,6 +35,17 @@ in
 	in
 		{GetRandElem L}
 	end
+
+	fun{GetItemsNoCreated Player Load}
+		fun{Loop Player Items}
+			case Items of nil then nil
+			[] Item|T andthen {Not {IsLoaded Player Item Load}} then Item|{Loop Player T}
+			[] _|T then {Loop Player T} end		
+		end
+	in
+		{Loop Player {Record.arity Player.load}}
+	end
+
 
 	fun{GetItemsLoaded Player Load}
 		fun{Loop Player Items}

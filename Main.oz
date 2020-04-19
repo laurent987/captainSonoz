@@ -5,44 +5,51 @@ import
     PlayerManager
 	System(show:Show)
 	OS
+	Application(exit:Exit)
 define
 	PlayerList
 	GUI_port
-	X
 	proc {SimultateThinking}
 		{Delay Input.thinkMin + {OS.rand} mod (Input.thinkMax - Input.thinkMin)}
 	end
 	proc {NewGameTurnBased PlayerList}
-		proc {LoopGame PlayerList} 
+		proc {LoopGame PlayerList}
 			if {Length PlayerList} > 1 then
 				{LoopGame {RoundTable PlayerList PlayerList}}
 			else
-				{Show 'the end'#PlayerList}
+				{Show 'The end! The winner is the player'#PlayerList.1.color}
+				{Exit 0}
 			end
 		end
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
 		% PL is the List of All the players alive
 		fun {RoundTable PlayersLeft PL}
 			case PlayersLeft of nil then nil
-			[] P|Pr andthen {Send P.port isDead($)} then {RoundTable Pr PL}
+			[] P|Pr andthen {Send P.port isDead($)} then
+				{RoundTable Pr PL}
 			[] P|Pr andthen X in (X=P.turnToWait)>0 then
-				{Record.adjoin P player(turnToWait: X-1)}|{RoundTable Pr PL}
-			[] P|Pr then {PlayTurn P PL}|{RoundTable Pr PL}
+				{Record.adjoin P player(turnToWait:X-1)}|{RoundTable Pr PL}
+			[] P|Pr then 
+				{PlayTurn P PL}|{RoundTable Pr PL}
 			end
 		end
-		fun {PlayTurn Player PlayerList} Dir in
-			{Show '//// Turn of player'#Player.color#' ////'}
+		fun {PlayTurn Player PlayerList} Dir NewStatePlayer in
+			{Show 'Turn of player'#Player.color}
 			{Delay Input.guiDelay}
-			if Player.surface then {Send Player.port dive} end
+			if Player.surface then  
+				{Send Player.port dive}
+				NewStatePlayer = {Record.adjoin Player player(surface:false)}
+			end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
-				{Record.adjoin Player player(turnToWait: Input.turnSurface surface:true)}
+				NewStatePlayer = {Record.adjoin Player player(turnToWait:Input.turnSurface surface:true)}
 			elseif Dir==continue then
 				{ChargeItem Player PlayerList}
 				{FireItem Player PlayerList}
 				{FireMine Player PlayerList}
-				Player
-			else Player end
+				if {Not {IsDet NewStatePlayer}} then NewStatePlayer = Player end
+			end
+			NewStatePlayer
 		end
 	in
 		{LoopGame PlayerList}
@@ -180,11 +187,10 @@ define
 	end
 in
     GUI_port = {GUI.portWindow}
-    {Send GUI_port buildWindow(X)}
+    {Send GUI_port buildWindow}
 
     PlayerList = {GeneratePlayers} 
     {List.forAll PlayerList InitPlayer}
-	{Wait X} % Wait Interface is build
     if (Input.isTurnByTurn) then 
         {NewGameTurnBased PlayerList}
     else

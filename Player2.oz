@@ -53,7 +53,7 @@ in
         {NewPort Stream}
     end
 
-proc{TreatStream Stream State}
+	proc{TreatStream Stream State}
 		case Stream
 		of nil then skip
 		[] Msg|T then NewSubsetState in
@@ -69,7 +69,8 @@ proc{TreatStream Stream State}
 		Fun = {Record.label Msg}
 	in
 		{BoundId Args Msg State}
-		if {Value.hasFeature Strategy Fun} then 
+		if {Value.hasFeature Strategy Fun} 
+			andthen ({Not {IsDead State}} orelse {Record.label Msg} == isDead) then 
 			{Procedure.apply Strategy.Fun Args}
 			{FunAnonyme State}
 		else player() end
@@ -80,18 +81,15 @@ proc{TreatStream Stream State}
 		Arities = {Record.arity NewSubsetState}
 		fun{Loop State Arities}
 			case Arities of nil then State
-			[] H|T andthen (
-					{Atom.is NewSubsetState.H}
-					orelse {Bool.is NewSubsetState.H} 
-					orelse {List.is NewSubsetState.H}
-					orelse {Not {Record.is NewSubsetState.H}}) then
-				{Loop {Record.adjoin
-						State
-						Label(H:NewSubsetState.H)} T}
-			[] H|T then
+			[] H|T andthen {Not {List.is NewSubsetState.H}}
+					andthen {Record.is NewSubsetState.H} then
 				{Loop {Record.adjoin
 						State
 						Label(H:{MergeState State.H NewSubsetState.H})} T}
+			[] H|T then
+				{Loop {Record.adjoin
+						State
+						Label(H:NewSubsetState.H)} T}
 			end
 		end
 	in
@@ -120,7 +118,6 @@ proc{TreatStream Stream State}
 			else Args.1 = State.id end
 		end
 	end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Strategy functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	Strategy = strategy(
@@ -150,10 +147,12 @@ proc{TreatStream Stream State}
 			Position = {GetPositionAround2 Player.position 1 1 [{IsNotAlreadyGoThere Player.path}] Map}
 			end
 			if Position == null then
+				{Show '|_______'#Player.id.color#makeSurface}
 				Direction=surface
 				player(surface:true path: Player.position|nil)
 			else 
 				Direction = {GetDirection Player.position Position}
+				{Show '|_______'#Player.id.color#goTo#Direction#'in'#Position}
 				player(position:Position direction:Direction path:Position|Player.path)
 			end
 		end
@@ -163,11 +162,18 @@ proc{TreatStream Stream State}
 	fun{$ ?ID ?KindItem}
 		fun{$ Player} Items Item NewLoad in
 			Item = mine
-			NewLoad = Player.load.Item + 1
-			if NewLoad mod Input.Item == 0 then KindItem = Item
-			else KindItem = null end
-			{Show Player.id.color#chargeItem#Item#NewLoad}
-			player(load: items(Item:NewLoad))
+			if {IsLoaded Player Item Load} then 
+				KindItem = null
+				player()
+			else 
+				NewLoad = Player.load.Item + 1
+				{Show '|_______'#Player.id.color#chargeItem#Item#NewLoad}
+				if NewLoad == Input.Item then 
+					{Show '|_______'#Player.id.color#createdItem#Item#NewLoad}
+					KindItem = Item
+				else KindItem = null end
+				player(load:items(Item:NewLoad))
+			end
 		end
 	end
 
@@ -185,7 +191,7 @@ proc{TreatStream Stream State}
 				[] drone then KindFire = drone(row 3)
 				[] sonar then KindFire = sonar
 				end
-				{Show Player.id.color#fireItem#Item}
+				{Show '|_______'#Player.id.color#fireItem#Item}
 				if {IsDet MinePos} then Mines = MinePos|Player.mines
 				else Mines = Player.mines end
 
@@ -206,7 +212,7 @@ proc{TreatStream Stream State}
 					andthen {GetManhattanDst H Player.position} >= MinSecurityDstExplosion
 					then
 				Mine=H
-				{Show Player.id.color#fireMine#H}
+				{Show '|_______'#Player.id.color#fireMine#H}
 				player(mines:Mines)
 			else Mine=null player()
 			end
@@ -288,7 +294,6 @@ proc{TreatStream Stream State}
 			player()
 		end
 	end
-
 
 	sayAnswerSonar:
 	fun{$ ID Answer}
