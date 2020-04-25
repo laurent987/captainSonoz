@@ -2,6 +2,7 @@ functor
 import
 	QTk at 'x-oz://system/wp/QTk.ozf'
 	Input
+	System(show:Show)
 export
 	portWindow:StartWindow
 define
@@ -22,28 +23,52 @@ define
 	MoveSubmarine
 	DrawMine
 	RemoveMine
+	DrawOneSegmentOfPath
+	UpdatePath
+	RemovePathTmp
 	DrawPath
 
+
 	BuildWindow
+	Handles
+	Port
+	AddPlayerToPathDisplay
+	BuildPathWidget
 
 	Label
 	Squares
 	DrawMap
 
 	StateModification
+	NewState
 
 	UpdateLife
 in
 
+	proc{AddPlayerToPathDisplay Grid ID}
+		{Grid.path insert('end' [ID.color])}
+	end
+
+	proc{BuildPathWidget Handle}
+		{Handle bind(event:"<1>"
+					action:
+						proc{$} X Color in
+							X = {Handle get(firstselection:$)}
+							Color = {List.nth {Handle get(1:$)} X}
+							{Send Port displayPath(Color)}
+						end
+		)}
+	end
+
 %%%%% Build the initial window and set it up (call only once)
 	fun{BuildWindow}
-		Grid GridScore Toolbar Desc DescScore Window
+		Grid GridScore Path Toolbar Desc DescScore DescPath Window
 	in
 		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close))
 		Desc=grid(handle:Grid height:500 width:500)
 		DescScore=grid(handle:GridScore height:100 width:500)
-		Window={QTk.build td(Toolbar Desc DescScore)}
-  
+		DescPath=dropdownlistbox(handle:Path init:[all])
+		Window={QTk.build td(Toolbar Desc lr(DescScore DescPath))}
 		{Window show}
 
 		% configure rows and set headers
@@ -65,8 +90,9 @@ in
 		end
 
 		{DrawMap Grid}
+		{BuildPathWidget Path}
 
-		handle(grid:Grid score:GridScore)
+		handle(grid:Grid score:GridScore path:Path)
 	end
 
 %%%%% Squares of water and island
@@ -110,40 +136,45 @@ in
 
 		LabelSub = label(text:"S" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
 		LabelScore = label(text:Input.maxDamage borderwidth:5 handle:HandleScore relief:solid bg:Color ipadx:5 ipady:5)
-		HandlePath = {DrawPath Grid Color X Y}
+		HandlePath = path(handle:{DrawOneSegmentOfPath Grid Color X Y} x:X y:Y)
 		{Grid.grid configure(LabelSub row:X+1 column:Y+1 sticky:wesn)}
 		{Grid.score configure(LabelScore row:1 column:Id sticky:wesn)}
-		{HandlePath 'raise'()}
+		{HandlePath.handle 'raise'()}
 		{Handle 'raise'()}
-		guiPlayer(id:ID score:HandleScore submarine:Handle mines:nil path:HandlePath|nil)
+		guiPlayer(id:ID score:HandleScore submarine:Handle mines:nil path:HandlePath|nil drawPath:true)
 	end
 
 	fun{MoveSubmarine Position}
 		fun{$ Grid State}
-			ID HandleScore Handle Mine Path NewPath X Y
+			ID HandleScore Handle Mine Path NewPath DrawPath X Y
 		in
-			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
+			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:DrawPath) = State
 			pt(x:X y:Y) = Position
-			NewPath = {DrawPath Grid ID.color X Y}
-			{Grid.grid remove(Handle)}
-			{Grid.grid configure(Handle row:X+1 column:Y+1 sticky:wesn)}
-			{NewPath 'raise'()}
+			NewPath = path(handle:{DrawOneSegmentOfPath Grid ID.color X Y} x:X y:Y)
+			if {Not DrawPath} then 
+				{Grid.grid remove(NewPath.handle)}
+				{Grid.grid remove(Handle)}
+			else
+				{Grid.grid remove(Handle)}
+				{Grid.grid configure(Handle row:X+1 column:Y+1 sticky:wesn)}
+			end
+			{NewPath.handle 'raise'()}
 			{Handle 'raise'()}
-			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:NewPath|Path)
+			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:NewPath|Path drawPath:DrawPath)
 		end
 	end
   
 	fun{DrawMine Position}
 		fun{$ Grid State}
-			ID HandleScore Handle Mine Path LabelMine HandleMine X Y
+			ID HandleScore Handle Mine Path LabelMine HandleMine Bool X Y
 			in
-			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
+			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:Bool) = State
 			pt(x:X y:Y) = Position
 			LabelMine = label(text:"M" handle:HandleMine borderwidth:5 relief:raised bg:ID.color ipadx:5 ipady:5)
-			{Grid.grid configure(LabelMine row:X+1 column:Y+1)}
+			if Bool then {Grid.grid configure(LabelMine row:X+1 column:Y+1)} end
 			{HandleMine 'raise'()}
 			{Handle 'raise'()}
-			guiPlayer(id:ID score:HandleScore submarine:Handle mines:mine(HandleMine Position)|Mine path:Path)
+			guiPlayer(id:ID score:HandleScore submarine:Handle mines:mine(HandleMine Position)|Mine path:Path drawPath:Bool) 
 		end
 	end
 
@@ -163,16 +194,30 @@ in
 	in
 		fun{RemoveMine Position}
 			fun{$ Grid State}
-				ID HandleScore Handle Mine Path NewMine
+				ID HandleScore Handle Mine Path NewMine Bool
 			in
-				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
+				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:Bool) = State
 				NewMine = {RmMine Grid Position Mine}
-				guiPlayer(id:ID score:HandleScore submarine:Handle mines:NewMine path:Path)
+				guiPlayer(id:ID score:HandleScore submarine:Handle mines:NewMine path:Path drawPath:Bool)
 			end
 		end
 	end
+
+	proc{UpdatePath Selected Grid State}
+		for Player in State do
+			if Selected=={Atom.toString all} then {DrawPath Grid Player}
+			elseif Selected=={Atom.toString Player.id.color} then {DrawPath Grid Player}
+			else {RemovePathTmp Grid Player} end
+		end
+	end
+
+	proc{DrawPath Grid Player}
+		for Path in Player.path do
+			{Grid.grid configure(Path.handle row:Path.x+1 column:Path.y+1)}
+		end
+	end
 	
-	fun{DrawPath Grid Color X Y}
+	fun{DrawOneSegmentOfPath Grid Color X Y}
 		Handle LabelPath
 	in
 		LabelPath = label(text:"**" handle:Handle bg:Color)
@@ -184,22 +229,27 @@ in
 		{Grid.grid forget(Handle)}
 	end
 
+	proc{RemovePathTmp Grid Player}
+		for P in Player.path do
+			{Grid.grid remove(P.handle)}
+		end
+	end
 		
 	fun{RemovePath Grid State}
-		ID HandleScore Handle Mine Path
+		ID HandleScore Handle Mine Path Bool
 	in
-		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
-		for H in Path.2 do
-	 {RemoveItem Grid H}
+		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:Bool) = State
+		for P in Path.2 do
+	 {RemoveItem Grid P.handle}
 		end
-		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path.1|nil)
+		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path.1|nil drawPath:Bool)
 	end
 
 	fun{UpdateLife Life}
 		fun{$ Grid State}
 			HandleScore
 			in
-			guiPlayer(id:_ score:HandleScore submarine:_ mines:_ path:_) = State
+			guiPlayer(id:_ score:HandleScore submarine:_ mines:_ path:_ drawPath:_) = State
 			{HandleScore set(Life)}
 	 		State
 		end
@@ -209,7 +259,7 @@ in
 	fun{StateModification Grid WantedID State Fun}
 		case State
 		of nil then nil
-		[] guiPlayer(id:ID score:_ submarine:_ mines:_ path:_)|Next then
+		[] guiPlayer(id:ID score:_ submarine:_ mines:_ path:_ drawPath:_)|Next then
 			if (ID == WantedID) then
 				{Fun Grid State.1}|Next
 			else
@@ -221,11 +271,11 @@ in
 	fun{RemovePlayer Grid WantedID State}
 		case State
 		of nil then nil
-		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P)|Next then
+		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:M path:P drawPath:_)|Next then
 			if (ID == WantedID) then
 				{HandleScore set(0)}
 				for H in P do
-			 		{RemoveItem Grid H}
+			 		{RemoveItem Grid H.handle}
 				end
 				for H in M do
 			 		{RemoveItem Grid H.1}
@@ -238,11 +288,21 @@ in
 		end
 	end
 
+	fun{NewState IDColor State}
+		case State
+		of nil then nil
+		[] guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:Bool)|Next then
+			if ({Atom.toString ID.color} == IDColor) orelse {Atom.toString all} == IDColor then
+				guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:true)|{NewState IDColor State.2}
+			else guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path drawPath:false)|{NewState IDColor State.2}
+			end
+		end
+	end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	fun{StartWindow}
 		Stream
-		Port
 	in
 		{NewPort Stream Port}
 		thread
@@ -254,11 +314,15 @@ in
 	proc{TreatStream Stream Grid State}
 		case Stream
 		of nil then skip
-		[] buildWindow|T then NewGrid in 
+		[] buildWindow|T then NewGrid in
 			NewGrid = {BuildWindow}
 			{TreatStream T NewGrid State}
+		[] displayPath(IDColor)|T then 
+			{UpdatePath IDColor Grid State}
+			{TreatStream T Grid {NewState IDColor State}}
 		[] initPlayer(ID Position)|T then NewState in
 			NewState = {DrawSubmarine Grid ID Position}
+			{AddPlayerToPathDisplay Grid ID}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then
 			{TreatStream T Grid {StateModification Grid ID State {MoveSubmarine Position}}}

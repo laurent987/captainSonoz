@@ -18,7 +18,7 @@ define
 				{LoopGame {RoundTable PlayerList PlayerList}}
 			else
 				{Show 'The end! The winner is the player'#PlayerList.1.color}
-				{Exit 0}
+				% {Exit 0}
 			end
 		end
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
@@ -42,7 +42,7 @@ define
 			end
 			Dir = {Move Player PlayerList}
 			if Dir==surface then
-				NewStatePlayer = {Record.adjoin Player player(turnToWait:Input.turnSurface surface:true)}
+				NewStatePlayer = {Record.adjoin Player player(turnToWait:Input.turnSurface-1 surface:true)}
 			elseif Dir==continue then
 				{ChargeItem Player PlayerList}
 				{FireItem Player PlayerList}

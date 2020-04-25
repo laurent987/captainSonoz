@@ -108,7 +108,7 @@ in
 %%%% Players description %%%%
 
    NbPlayer = 2
-   Players = [player089human player089smart]
+   Players = [player089dummy player089smart]
    Colors = [yellow green]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
@@ -140,6 +140,6 @@ in
 
 %%%% Waiting time for the GUI between each effect %%%%
 
-   GUIDelay = 50 % ms
+   GUIDelay = 1000 % ms
 
 end

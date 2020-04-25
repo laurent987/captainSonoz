@@ -45,6 +45,9 @@ clean:
 clean_in:
 	rm -f out/Input.ozf
 
+clean_gui:
+	rm -f out/GUI.ozf
+
 clean_player:
 	rm out/Player.ozf
 
