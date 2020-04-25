@@ -158,9 +158,6 @@ in
 		end
 	end
 
-
-
-
 	proc{InitInfoGUI}
 		{Handles.info configure({Label 'lifeLeft'} row:0 column:0 sticky:wesn)}
 		{Handles.info configure({Label Input.maxDamage} row:0 column:1 sticky:wesn)}
