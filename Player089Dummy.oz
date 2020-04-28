@@ -7,7 +7,7 @@ export
     portPlayer:StartPlayer
 define
 	%%% Data %%%
-	Strategy % Record belongs all the function strategy
+	Strategy % Record belongs all the functions strategy
 	Map = Input.map
 	NRow = Input.nRow
 	NColumn = Input.nColumn
@@ -322,6 +322,7 @@ in
 	fun{$ ID Damage LifeLeft}
 		fun{$ Player} player() end
 	end)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Position Manager %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	fun{MapToList Map}
@@ -374,7 +375,7 @@ in
 	end
 
 	fun{GetPositionsAround Position Min Max Filters} S in
-		S = thread {GenerateManhattanPositions Position Min Max} end
+		S = {GenerateManhattanPositions Position Min Max}
 		{ApplyFilters Filters S}
 	end
 
@@ -441,8 +442,9 @@ in
 		end
     end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Filter %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Filters %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
 	fun{ApplyFilters Filters Ys}
 		thread
 			case Filters of nil then Ys
@@ -496,6 +498,7 @@ in
 			X > 1 andthen X < {GetNRow Map} andthen Y > 1 andthen Y < {GetNColumn Map}
 		end
 	end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Util %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
