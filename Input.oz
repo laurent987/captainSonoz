@@ -71,7 +71,7 @@ in
 	  [0 0 0 0 0 0 0 0 0 0]
 	  [0 0 0 0 0 0 0 0 0 0]]
 
-	
+
 	fun{GetRandMap NRow NCol Alpha}
 		fun{Loop N}
 			if N==NRow then nil
@@ -81,7 +81,7 @@ in
 	in
 		{Loop 0}
 	end
-	
+
 	fun{GenRandBinList Length Alpha}
 		fun {Loop Length N}
 			if Length==N then nil
@@ -102,13 +102,13 @@ in
 		else  if Ran < 80 then 1 else 0 end
 		end
 	end
-	
+
 
 
 %%%% Players description %%%%
 
    NbPlayer = 2
-   Players = [player089dummy player089smart]
+   Players = [player054human player054smart]
    Colors = [yellow green]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
@@ -140,6 +140,6 @@ in
 
 %%%% Waiting time for the GUI between each effect %%%%
 
-   GUIDelay = 1000 % ms
+   GUIDelay = 500 % ms
 
 end

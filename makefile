@@ -10,7 +10,7 @@ out/GUI.ozf: out/Input.ozf
 out/Input.ozf:
 	ozc -c Input.oz -o out/Input.ozf
 
-out/PlayerManager.ozf: out/Player.ozf out/Player2.ozf out/Player089Human.ozf out/Player089Dummy.ozf out/Player089Smart.ozf
+out/PlayerManager.ozf: out/Player.ozf out/Player2.ozf out/Player054Human.ozf out/Player054Dummy.ozf out/Player054Smart.ozf
 	ozc -c PlayerManager.oz -o out/PlayerManager.ozf
 
 out/Player.ozf: out/PositionManager.ozf out/Util.ozf out/Filters.ozf
@@ -19,14 +19,14 @@ out/Player.ozf: out/PositionManager.ozf out/Util.ozf out/Filters.ozf
 out/Player2.ozf: out/PositionManager.ozf out/Util.ozf out/Filters.ozf
 	ozc -c Player2.oz -o out/Player2.ozf
 
-out/Player089Human.ozf:
-	ozc -c Player089Human.oz -o out/Player089Human.ozf
+out/Player054Human.ozf:
+	ozc -c Player054Human.oz -o out/Player054Human.ozf
 
-out/Player089Dummy.ozf:
-	ozc -c Player089Dummy.oz -o out/Player089Dummy.ozf
+out/Player054Dummy.ozf:
+	ozc -c Player054Dummy.oz -o out/Player054Dummy.ozf
 
-out/Player089Smart.ozf:
-	ozc -c Player089Smart.oz -o out/Player089Smart.ozf
+out/Player054Smart.ozf:
+	ozc -c Player054Smart.oz -o out/Player054Smart.ozf
 
 out/PositionManager.ozf: out/Filters.ozf
 	ozc -c PositionManager.oz -o out/PositionManager.ozf

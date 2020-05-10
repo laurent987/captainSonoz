@@ -18,7 +18,7 @@ define
 				{LoopGame {RoundTable PlayerList PlayerList}}
 			else
 				{Show 'The end! The winner is the player'#PlayerList.1.color}
-				% {Exit 0}
+				{Exit 0}
 			end
 		end
 		% PlayersLeft is a List with the Player who don't play yet in this round table.
